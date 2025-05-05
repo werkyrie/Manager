@@ -82,7 +82,7 @@ export function TransactionsView({
   formatTableDate,
   setTransactions,
   updateTransaction,
-  agentOptions,
+  agentOptions,\
   primaryButtonClass?: string,
 }) {
   // Add the translation hook
