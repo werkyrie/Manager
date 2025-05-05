@@ -16,7 +16,7 @@ import {
   Search,
   StickyNote,
   Trash2,
-  Calendar,
+  CalendarIcon,
   DollarSign,
   Users,
   ArrowRightLeft,
@@ -24,12 +24,17 @@ import {
   Check,
   X,
   Edit,
+  ChevronLeft,
+  ChevronRight,
+  MoreHorizontal,
 } from "lucide-react"
 import { TeamBadge } from "./team-logos"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { useToast } from "@/components/ui/use-toast"
 import { FloatingActionButton } from "@/components/ui/floating-action-button"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
 
 // Import the useTranslation hook
 import { useTranslation } from "react-i18next"
@@ -55,11 +60,6 @@ type SortDirection = "asc" | "desc" | null
 type SortField = "date" | "amount" | null
 
 type BulkActionType = "delete" | "changeType" | "changeTeam" | "changeDate" | "changeAmount" | null
-
-// const AGENT_OPTIONS = {
-//   Hotel: ["Primo", "Cu", "Kel", "Mar", "Vivian", "Jhe", "Lovely", "Ken", "Kyrie"],
-//   Hustle: ["Joie", "Elocin", "Aubrey", "Xela"],
-// }
 
 // Transactions View Component
 export function TransactionsView({
@@ -108,7 +108,7 @@ export function TransactionsView({
   primaryButtonClass?: string
 }) {
   // Add the translation hook
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { toast } = useToast()
 
   // State for bulk actions
@@ -129,8 +129,56 @@ export function TransactionsView({
   const [inlineFormData, setInlineFormData] = useState<Transaction | null>(null)
   const inlineFormRef = useRef<HTMLTableRowElement>(null)
 
+  // Add pagination state at the top of the component, after the existing state declarations
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25) // Changed from 10 to 25
+
+  // Add a function to handle page changes
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    // Scroll to top of the table when changing pages
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
+  // Add a function to handle page size changes
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size)
+    // Reset to first page when changing page size
+    setCurrentPage(1)
+  }
+
+  // Modify the getFilteredAndSortedTransactions function to return all filtered transactions without pagination
+  // We'll apply pagination in the render method
+
+  // Add a new function to get paginated transactions
+  const getPaginatedTransactions = () => {
+    const filtered = getFilteredAndSortedTransactions()
+    const startIndex = (currentPage - 1) * pageSize
+    return filtered.slice(startIndex, startIndex + pageSize)
+  }
+
+  // Calculate total pages
+  const totalFilteredTransactions = getFilteredAndSortedTransactions().length
+  const totalPages = Math.max(1, Math.ceil(totalFilteredTransactions / pageSize))
+
   // Get filtered transactions
   const filteredTransactions = getFilteredAndSortedTransactions()
+
+  // Format date as "Month Day" (e.g., "May 5")
+  const formatMonthDay = (dateString: string) => {
+    const date = new Date(dateString)
+    const currentLang = i18n.language
+
+    if (currentLang === "zh") {
+      // For Chinese, format as "5月5日"
+      const month = date.getMonth() + 1
+      const day = date.getDate()
+      return `${month}月${day}日`
+    } else {
+      // For English, format as "May 5"
+      return date.toLocaleDateString("en-US", { month: "long", day: "numeric" })
+    }
+  }
 
   // Handle select all checkbox
   const handleSelectAll = () => {
@@ -404,6 +452,15 @@ export function TransactionsView({
     }
   }
 
+  // Handle date change in the calendar
+  const handleDateChange = (date: Date | undefined) => {
+    if (!date || !inlineFormData) return
+
+    // Format the date as YYYY-MM-DD for the input
+    const formattedDate = date.toISOString().split("T")[0]
+    setInlineFormData({ ...inlineFormData, date: formattedDate })
+  }
+
   // Handle click outside to cancel inline editing
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -573,7 +630,7 @@ export function TransactionsView({
               onClick={() => setCurrentBulkAction("changeDate")}
               className="flex items-center gap-1"
             >
-              <Calendar className="h-4 w-4" />
+              <CalendarIcon className="h-4 w-4" />
               {t("bulkActions.changeDate")}
             </Button>
 
@@ -682,7 +739,7 @@ export function TransactionsView({
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filteredTransactions.map((transaction) =>
+              {getPaginatedTransactions().map((transaction) =>
                 editingInlineId === transaction.id ? (
                   // Inline editing row
                   <tr
@@ -737,19 +794,24 @@ export function TransactionsView({
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="relative">
-                        <Input
-                          type="date"
-                          value={inlineFormData?.date}
-                          onChange={(e) => setInlineFormData({ ...inlineFormData!, date: e.target.value })}
-                          className="h-8 w-32"
-                          // Safer approach for mobile support
-                          onClick={(e) => {
-                            // Try to focus and open the date picker in a safer way
-                            if (e.currentTarget) {
-                              e.currentTarget.focus()
-                            }
-                          }}
-                        />
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="h-8 w-[180px] justify-start text-left font-normal">
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {inlineFormData?.date
+                                ? formatMonthDay(inlineFormData.date)
+                                : t("transactionModal.selectDate")}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={inlineFormData?.date ? new Date(inlineFormData.date) : undefined}
+                              onSelect={(date) => handleDateChange(date)}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
                       </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
@@ -839,7 +901,7 @@ export function TransactionsView({
                       <TeamBadge team={transaction.team} />
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">{t(`agents.${transaction.agent}`)}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{formatTableDate(transaction.date)}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">{formatMonthDay(transaction.date)}</td>
                     <td className="px-4 py-3 whitespace-nowrap">{transaction.shopId}</td>
                     <td className="px-4 py-3 whitespace-nowrap">${transaction.amount.toLocaleString()}</td>
                     <td className="px-4 py-3 whitespace-nowrap">
@@ -884,77 +946,387 @@ export function TransactionsView({
 
           {/* Add mobile card view for small screens */}
           <div className="grid grid-cols-1 gap-4 md:hidden">
-            {filteredTransactions.map((transaction) => (
-              <div
-                key={transaction.id}
-                className={cn(
-                  "p-4 rounded-lg border border-border/40",
-                  transaction.type === "Deposit" ? "bg-green-50 dark:bg-green-900/20" : "bg-red-50 dark:bg-red-900/20",
-                )}
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      checked={selectedTransactions.includes(transaction.id)}
-                      onCheckedChange={() => handleSelectTransaction(transaction.id)}
-                      aria-label={`Select transaction ${transaction.id}`}
-                    />
-                    <TeamBadge team={transaction.team} />
-                  </div>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => deleteTransaction(transaction.id)}
-                      className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                    {transaction.notes && (
-                      <button
-                        title={transaction.notes}
-                        className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
+            {getPaginatedTransactions().map((transaction) =>
+              editingInlineId === transaction.id ? (
+                // Mobile editing view
+                <div
+                  key={transaction.id}
+                  className={cn(
+                    "p-4 rounded-lg border border-border/40",
+                    transaction.type === "Deposit"
+                      ? "bg-green-100/70 dark:bg-green-900/30"
+                      : "bg-red-100/70 dark:bg-red-900/30",
+                  )}
+                  ref={inlineFormRef}
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <h3 className="font-medium">{t("common.editTransaction")}</h3>
+                    <div className="flex space-x-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={saveInlineEdit}
+                        className="h-8 w-8 p-0 text-green-600 hover:text-green-800 dark:text-green-500 dark:hover:text-green-400"
                       >
-                        <StickyNote className="w-5 h-5" />
+                        <Check className="h-5 w-5" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={cancelInlineEdit}
+                        className="h-8 w-8 p-0 text-red-600 hover:text-red-800 dark:text-red-500 dark:hover:text-red-400"
+                      >
+                        <X className="h-5 w-5" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="mobile-team" className="block mb-2">
+                        {t("transactionModal.team")}
+                      </Label>
+                      <Select
+                        value={inlineFormData?.team}
+                        onValueChange={(value) =>
+                          setInlineFormData({ ...inlineFormData!, team: value as "Hotel" | "Hustle" })
+                        }
+                      >
+                        <SelectTrigger id="mobile-team" className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Hotel">{t("common.hotel")}</SelectItem>
+                          <SelectItem value="Hustle">{t("common.hustle")}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="mobile-agent" className="block mb-2">
+                        {t("transactionModal.agent")}
+                      </Label>
+                      <Select
+                        value={inlineFormData?.agent}
+                        onValueChange={(value) => setInlineFormData({ ...inlineFormData!, agent: value })}
+                      >
+                        <SelectTrigger id="mobile-agent" className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {agentOptions[inlineFormData?.team || "Hotel"].map((agent) => (
+                            <SelectItem key={agent} value={agent}>
+                              {t(`agents.${agent}`, agent)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="mobile-date" className="block mb-2">
+                        {t("transactionModal.date")}
+                      </Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            id="mobile-date"
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {inlineFormData?.date
+                              ? formatMonthDay(inlineFormData.date)
+                              : t("transactionModal.selectDate")}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={inlineFormData?.date ? new Date(inlineFormData.date) : undefined}
+                            onSelect={(date) => handleDateChange(date)}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="mobile-shopId" className="block mb-2">
+                        {t("transactionModal.shopId")}
+                      </Label>
+                      <Input
+                        id="mobile-shopId"
+                        type="text"
+                        value={inlineFormData?.shopId}
+                        onChange={(e) => setInlineFormData({ ...inlineFormData!, shopId: e.target.value })}
+                        className="w-full"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="mobile-amount" className="block mb-2">
+                        {t("transactionModal.amount")}
+                      </Label>
+                      <Input
+                        id="mobile-amount"
+                        type="number"
+                        value={inlineFormData?.amount}
+                        onChange={(e) => setInlineFormData({ ...inlineFormData!, amount: Number(e.target.value) })}
+                        className="w-full"
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="mobile-type" className="block mb-2">
+                        {t("transactionModal.type")}
+                      </Label>
+                      <Select
+                        value={inlineFormData?.type}
+                        onValueChange={(value) =>
+                          setInlineFormData({ ...inlineFormData!, type: value as "Deposit" | "Withdrawal" })
+                        }
+                      >
+                        <SelectTrigger id="mobile-type" className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Deposit">{t("common.deposit")}</SelectItem>
+                          <SelectItem value="Withdrawal">{t("common.withdrawal")}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                // Normal mobile card view (not being edited)
+                <div
+                  key={transaction.id}
+                  className={cn(
+                    "p-4 rounded-lg border border-border/40",
+                    transaction.type === "Deposit"
+                      ? "bg-green-50 dark:bg-green-900/20"
+                      : "bg-red-50 dark:bg-red-900/20",
+                  )}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={selectedTransactions.includes(transaction.id)}
+                        onCheckedChange={() => handleSelectTransaction(transaction.id)}
+                        aria-label={`Select transaction ${transaction.id}`}
+                      />
+                      <TeamBadge team={transaction.team} />
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => deleteTransaction(transaction.id)}
+                        className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+                      >
+                        <Trash2 className="w-5 h-5" />
                       </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-y-2 text-sm">
-                  <div className="font-medium">{t("transactions.agent")}</div>
-                  <div>{t(`agents.${transaction.agent}`)}</div>
-
-                  <div className="font-medium">{t("transactions.date")}</div>
-                  <div>{formatTableDate(transaction.date)}</div>
-
-                  <div className="font-medium">{t("transactions.shopId")}</div>
-                  <div>{transaction.shopId}</div>
-
-                  <div className="font-medium">{t("transactions.amount")}</div>
-                  <div>${transaction.amount.toLocaleString()}</div>
-
-                  <div className="font-medium">{t("transactions.type")}</div>
-                  <div>
-                    <span
-                      className={cn(
-                        "inline-flex rounded-full px-2 py-0.5 text-xs font-semibold",
-                        transaction.type === "Deposit"
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                          : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+                      {transaction.notes && (
+                        <button
+                          title={transaction.notes}
+                          className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
+                        >
+                          <StickyNote className="w-5 h-5" />
+                        </button>
                       )}
-                    >
-                      {t(`common.${transaction.type.toLowerCase()}`)}
-                    </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-y-2 text-sm">
+                    <div className="font-medium">{t("transactions.agent")}</div>
+                    <div>{t(`agents.${transaction.agent}`)}</div>
+
+                    <div className="font-medium">{t("transactions.date")}</div>
+                    <div>{formatMonthDay(transaction.date)}</div>
+
+                    <div className="font-medium">{t("transactions.shopId")}</div>
+                    <div>{transaction.shopId}</div>
+
+                    <div className="font-medium">{t("transactions.amount")}</div>
+                    <div>${transaction.amount.toLocaleString()}</div>
+
+                    <div className="font-medium">{t("transactions.type")}</div>
+                    <div>
+                      <span
+                        className={cn(
+                          "inline-flex rounded-full px-2 py-0.5 text-xs font-semibold",
+                          transaction.type === "Deposit"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                            : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+                        )}
+                      >
+                        {t(`common.${transaction.type.toLowerCase()}`)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 pt-3 border-t border-border/40 flex justify-end">
+                    <Button size="sm" variant="outline" onClick={() => startInlineEdit(transaction)}>
+                      <Edit className="w-4 h-4 mr-2" />
+                      {t("common.edit")}
+                    </Button>
                   </div>
                 </div>
-
-                <div className="mt-3 pt-3 border-t border-border/40 flex justify-end">
-                  <Button size="sm" variant="outline" onClick={() => startInlineEdit(transaction)}>
-                    <Edit className="w-4 h-4 mr-2" />
-                    {t("common.edit")}
+              ),
+            )}
+            <div className="px-4 py-2 bg-background rounded-lg border border-border/40">
+              <div className="flex flex-col items-center gap-2">
+                <div className="text-sm text-muted-foreground">
+                  {t("pagination.showing", {
+                    start: totalFilteredTransactions === 0 ? 0 : (currentPage - 1) * pageSize + 1,
+                    end: Math.min(currentPage * pageSize, totalFilteredTransactions),
+                    total: totalFilteredTransactions,
+                  })}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    {t("pagination.previous")}
+                  </Button>
+                  <span className="text-sm">{t("pagination.pageOf", { current: currentPage, total: totalPages })}</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages || totalPages === 0}
+                  >
+                    {t("pagination.next")}
+                    <ChevronRight className="h-4 w-4 ml-1" />
                   </Button>
                 </div>
               </div>
-            ))}
+            </div>
+          </div>
+        </div>
+        <div className="px-4 border-t border-border/40">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4">
+            <div className="text-sm text-muted-foreground">
+              {totalFilteredTransactions > 0
+                ? t("pagination.showing", {
+                    start: (currentPage - 1) * pageSize + 1,
+                    end: Math.min(currentPage * pageSize, totalFilteredTransactions),
+                    total: totalFilteredTransactions,
+                  })
+                : t("pagination.noResults")}
+            </div>
+
+            <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-muted-foreground whitespace-nowrap">{t("pagination.rowsPerPage")}</span>
+                <Select
+                  value={pageSize.toString()}
+                  onValueChange={(value) => handlePageSizeChange(Number.parseInt(value))}
+                >
+                  <SelectTrigger className="h-8 w-[70px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[10, 25, 50, 100].map((size) => (
+                      <SelectItem key={size} value={size.toString()}>
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  <span className="sr-only">{t("pagination.previous")}</span>
+                </Button>
+
+                <div className="flex items-center">
+                  {(() => {
+                    const pages = []
+                    const maxPagesToShow = 5
+
+                    if (totalPages <= maxPagesToShow) {
+                      for (let i = 1; i <= totalPages; i++) {
+                        pages.push(i)
+                      }
+                    } else {
+                      pages.push(1)
+
+                      let startPage = Math.max(2, currentPage - 1)
+                      let endPage = Math.min(totalPages - 1, currentPage + 1)
+
+                      if (currentPage <= 3) {
+                        endPage = Math.min(4, totalPages - 1)
+                      }
+
+                      if (currentPage >= totalPages - 2) {
+                        startPage = Math.max(2, totalPages - 3)
+                      }
+
+                      if (startPage > 2) {
+                        pages.push(-1)
+                      }
+
+                      for (let i = startPage; i <= endPage; i++) {
+                        pages.push(i)
+                      }
+
+                      if (endPage < totalPages - 1) {
+                        pages.push(-2)
+                      }
+
+                      pages.push(totalPages)
+                    }
+
+                    return pages.map((page, index) => {
+                      if (page < 0) {
+                        return (
+                          <div key={`ellipsis-${index}`} className="px-2">
+                            <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        )
+                      }
+
+                      return (
+                        <Button
+                          key={page}
+                          variant={currentPage === page ? "default" : "outline"}
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handlePageChange(page)}
+                        >
+                          {page}
+                        </Button>
+                      )
+                    })
+                  })()}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages || totalPages === 0}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                  <span className="sr-only">{t("pagination.next")}</span>
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </Card>
@@ -1070,13 +1442,22 @@ export function TransactionsView({
             </DialogHeader>
             <div className="py-4">
               <Label htmlFor="date">{t("bulkActions.selectDate")}</Label>
-              <Input
-                id="date"
-                type="date"
-                value={bulkActionDate}
-                onChange={(e) => setBulkActionDate(e.target.value)}
-                className="w-full mt-2"
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button id="date" variant="outline" className="w-full mt-2 justify-start text-left font-normal">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {bulkActionDate ? formatMonthDay(bulkActionDate) : t("bulkActions.selectDate")}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={bulkActionDate ? new Date(bulkActionDate) : undefined}
+                    onSelect={(date) => date && setBulkActionDate(date.toISOString().split("T")[0])}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setCurrentBulkAction(null)}>
