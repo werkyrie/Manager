@@ -283,8 +283,7 @@
     "enterName": "输入您的姓名",
     "signOut": "退出登录",
     "updating": "更新中...",
-    "updateProfile": "更新资料",
-    "rememberMe": "记住我"
+    "updateProfile": "更新资料"
   },
   "validation": {
     "allFieldsRequired": "所有字段均为必填字段。请填写所有字段。",

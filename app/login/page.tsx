@@ -14,12 +14,10 @@ import { useTranslation } from "react-i18next"
 import { LanguageSwitcher } from "../components/language-switcher"
 import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
-import { Checkbox } from "@/components/ui/checkbox"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [rememberMe, setRememberMe] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const { signIn } = useAuth()
   const { t } = useTranslation()
@@ -27,13 +25,6 @@ export default function LoginPage() {
 
   useEffect(() => {
     setMounted(true)
-
-    // Check if we have saved email in localStorage
-    const savedEmail = localStorage.getItem("savedEmail")
-    if (savedEmail) {
-      setEmail(savedEmail)
-      setRememberMe(true)
-    }
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -41,14 +32,7 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      // Save email to localStorage if remember me is checked
-      if (rememberMe) {
-        localStorage.setItem("savedEmail", email)
-      } else {
-        localStorage.removeItem("savedEmail")
-      }
-
-      await signIn(email, password, rememberMe)
+      await signIn(email, password)
     } catch (error) {
       console.error("Login error:", error)
     } finally {
@@ -167,23 +151,6 @@ export default function LoginPage() {
                     className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:border-gray-400 focus:ring-gray-400"
                   />
                 </div>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.55, duration: 0.5 }}
-                className="flex items-center space-x-2"
-              >
-                <Checkbox
-                  id="remember-me"
-                  checked={rememberMe}
-                  onCheckedChange={(checked) => setRememberMe(checked === true)}
-                  className="data-[state=checked]:bg-gray-200 data-[state=checked]:text-gray-900 border-gray-400"
-                />
-                <Label htmlFor="remember-me" className="text-sm text-gray-200 cursor-pointer">
-                  {t("auth.rememberMe")}
-                </Label>
               </motion.div>
             </CardContent>
             <CardFooter className="flex flex-col space-y-4">

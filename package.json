@@ -61,8 +61,8 @@
     "i18next": "latest",
     "@emotion/is-prop-valid": "latest",
     "react-i18next": "latest",
-    "framer-motion": "latest",
     "firebase": "latest",
+    "framer-motion": "latest",
     "i18next-browser-languagedetector": "latest"
   },
   "devDependencies": {

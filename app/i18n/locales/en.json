@@ -283,8 +283,7 @@
     "enterName": "Enter your name",
     "signOut": "Sign Out",
     "updating": "Updating...",
-    "updateProfile": "Update Profile",
-    "rememberMe": "Remember me"
+    "updateProfile": "Update Profile"
   },
   "validation": {
     "allFieldsRequired": "All fields are required. Please fill in all fields.",
