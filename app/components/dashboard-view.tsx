@@ -1,6 +1,6 @@
 "use client"
 
-import type React from "react"
+import React from "react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -53,6 +53,7 @@ export function DashboardView({
   // Add the translation hook
   const { t } = useTranslation()
   const [isMobile, setIsMobile] = useState(false)
+  const monthSelectRef = React.useRef<HTMLButtonElement>(null)
 
   // Check if we're on mobile
   useEffect(() => {
@@ -207,7 +208,7 @@ export function DashboardView({
                 value={filters.month}
                 onValueChange={(value) => setFilters((prev) => ({ ...prev, month: value }))}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full" ref={monthSelectRef}>
                   <SelectValue placeholder="All Months" />
                 </SelectTrigger>
                 <SelectContent>
@@ -227,7 +228,18 @@ export function DashboardView({
       {isMobile ? (
         <div className="grid grid-cols-3 gap-4">
           {appIcons.map((icon, index) => (
-            <div key={index} className="flex flex-col items-center">
+            <div
+              key={index}
+              className="flex flex-col items-center cursor-pointer"
+              onClick={() => {
+                // If this is the month icon or any icon when in mobile view, focus the month select
+                if (icon.title === t("dashboard.month") || isMobile) {
+                  if (monthSelectRef.current) {
+                    monthSelectRef.current.click()
+                  }
+                }
+              }}
+            >
               <div
                 className={cn(
                   "w-16 h-16 rounded-2xl flex items-center justify-center mb-2 shadow-lg relative",
