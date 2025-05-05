@@ -797,7 +797,6 @@ export function TransactionsView({
                         type="text"
                         value={inlineFormData?.shopId}
                         onChange={(e) => setInlineFormData({ ...inlineFormData!, shopId: e.target.value })}
-                        className="h-8...inlineFormData!, shopId: e.target.value})}
                         className="h-8 w-24"
                       />
                     </td>
@@ -995,7 +994,7 @@ export function TransactionsView({
                         <SelectContent>
                           {agentOptions[inlineFormData?.team || "Hotel"].map((agent) => (
                             <SelectItem key={agent} value={agent}>
-                              {t(`agents.${agent}`)}
+                              {t(`agents.${agent}`, agent)}
                             </SelectItem>
                           ))}
                         </SelectContent>

@@ -70,12 +70,7 @@
     "Joie": "Joie",
     "Elocin": "Elocin",
     "Aubrey": "Aubrey",
-    "Xela": "Xela",
-    "quickStats": "Quick Stats",
-    "topPerformer": "Top Performer",
-    "totalBalance": "Total Balance",
-    "agentCount": "Agent Count",
-    "totalAgents": "Total Agents"
+    "Xela": "Xela"
   },
   "notes": {
     "recycleBin": "Recycle Bin",
@@ -384,7 +379,6 @@
     "previous": "Previous page",
     "next": "Next page",
     "page": "Page {{page}} of {{total}}",
-    "goToPage": "Go to page {{page}}",
-    "pageOf": "Page {{current}} of {{total}}"
+    "goToPage": "Go to page {{page}}"
   }
 }
