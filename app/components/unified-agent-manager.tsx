@@ -24,9 +24,16 @@ type UnifiedAgentManagerProps = {
   onAddAgent: (team: "Hotel" | "Hustle", agentName: string) => Promise<boolean>
   onDeleteAgent: (team: "Hotel" | "Hustle", agentName: string) => Promise<boolean>
   onClose: () => void
+  primaryButtonClass?: string
 }
 
-export function UnifiedAgentManager({ agentOptions, onAddAgent, onDeleteAgent, onClose }: UnifiedAgentManagerProps) {
+export function UnifiedAgentManager({
+  agentOptions,
+  onAddAgent,
+  onDeleteAgent,
+  onClose,
+  primaryButtonClass,
+}: UnifiedAgentManagerProps) {
   const { t } = useTranslation()
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("add")
@@ -167,8 +174,8 @@ export function UnifiedAgentManager({ agentOptions, onAddAgent, onDeleteAgent, o
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-3xl border-border/40 shadow-lg animate-in fade-in-0 zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <Card className="w-full max-w-3xl border-border/40 shadow-lg animate-in fade-in-0 zoom-in-95 duration-200 max-h-[90vh] flex flex-col my-8">
         <div className="flex justify-between items-center p-4 border-b border-border/40">
           <h2 className="text-xl font-semibold">{t("agentModal.manageAgents")}</h2>
           <button
@@ -218,7 +225,7 @@ export function UnifiedAgentManager({ agentOptions, onAddAgent, onDeleteAgent, o
           </div>
 
           <Tabs defaultValue="add" value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-0">
               <TabsTrigger value="add" className="flex items-center gap-2">
                 <UserPlus className="h-4 w-4" />
                 {t("agentModal.addAgent")}
@@ -252,7 +259,14 @@ export function UnifiedAgentManager({ agentOptions, onAddAgent, onDeleteAgent, o
                       placeholder={t("agentModal.enterAgentName")}
                       className="flex-1"
                     />
-                    <Button type="submit" className="bg-purple-600 hover:bg-purple-700" disabled={isSubmitting}>
+                    <Button
+                      type="submit"
+                      className={
+                        primaryButtonClass ||
+                        "bg-gradient-to-r from-gray-900 to-black hover:from-black hover:to-gray-800 text-white shadow-lg dark:shadow-white/5 hover:shadow-black/25 dark:hover:shadow-white/10 transition-all duration-300"
+                      }
+                      disabled={isSubmitting}
+                    >
                       {isSubmitting ? (
                         <>
                           <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
@@ -280,7 +294,7 @@ export function UnifiedAgentManager({ agentOptions, onAddAgent, onDeleteAgent, o
             <TabsContent value="manage" className="mt-4">
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">{selectedTeam} Team Agents</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {agentOptions[selectedTeam].length > 0 ? (
                     agentOptions[selectedTeam].map((agent) => (
                       <div

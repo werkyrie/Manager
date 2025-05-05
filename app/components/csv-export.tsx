@@ -98,6 +98,23 @@ export function CSVExport({
   const [isPreview, setIsPreview] = useState(false)
   const [selectAll, setSelectAll] = useState(false)
 
+  // Add escape key handler
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onCancel()
+      }
+    }
+
+    // Add event listener
+    document.addEventListener("keydown", handleEscapeKey)
+
+    // Clean up
+    return () => {
+      document.removeEventListener("keydown", handleEscapeKey)
+    }
+  }, [onCancel])
+
   // Get unique agents
   const agents = Array.from(new Set(transactions.map((t) => t?.agent || "").filter(Boolean))).sort()
 
@@ -237,7 +254,7 @@ export function CSVExport({
         <CardContent className="flex-grow overflow-auto">
           {!isPreview ? (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <Label className="mb-2 block">{t("export.filterByTeam", "Filter by Team")}</Label>
                   <Select
@@ -519,7 +536,7 @@ export function CSVExport({
           )}
         </CardContent>
 
-        <CardFooter className="border-t bg-muted/20 p-4 flex justify-end space-x-2">
+        <CardFooter className="border-t bg-muted/20 p-4 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:space-x-2">
           {isPreview ? (
             <>
               <Button variant="outline" onClick={() => setIsPreview(false)}>

@@ -23,6 +23,7 @@ import {
   Loader2,
   Check,
   X,
+  Edit,
 } from "lucide-react"
 import { TeamBadge } from "./team-logos"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -82,6 +83,7 @@ export function TransactionsView({
   setTransactions,
   updateTransaction,
   agentOptions,
+  primaryButtonClass,
 }: {
   transactions: Transaction[]
   searchQuery: string
@@ -103,6 +105,7 @@ export function TransactionsView({
   setTransactions: (transactions: Transaction[]) => void
   updateTransaction: (transaction: Transaction) => Promise<Transaction>
   agentOptions: Record<string, string[]>
+  primaryButtonClass?: string
 }) {
   // Add the translation hook
   const { t } = useTranslation()
@@ -212,8 +215,8 @@ export function TransactionsView({
 
           // Show error toast
           toast({
-            title: "Error",
-            description: "Failed to delete some transactions. The data has been restored.",
+            title: t("common.error"),
+            description: t("bulkActions.deleteError"),
             variant: "destructive",
           })
           setIsLoading(false)
@@ -221,8 +224,8 @@ export function TransactionsView({
       } catch (error) {
         console.error("Error in bulk delete operation:", error)
         toast({
-          title: "Error",
-          description: "An unexpected error occurred. Please try again.",
+          title: t("common.error"),
+          description: t("common.unexpectedError"),
           variant: "destructive",
         })
         setIsLoading(false)
@@ -300,8 +303,8 @@ export function TransactionsView({
     } catch (error) {
       console.error("Error executing bulk action:", error)
       toast({
-        title: "Error",
-        description: "Failed to update transactions. Please try again.",
+        title: t("common.error"),
+        description: t("bulkActions.updateError"),
         variant: "destructive",
       })
       // Ensure dialog is closed on error
@@ -331,8 +334,8 @@ export function TransactionsView({
       // Validate required fields
       if (!inlineFormData.team || !inlineFormData.agent || !inlineFormData.date || !inlineFormData.type) {
         toast({
-          title: "Validation Error",
-          description: "Please fill in all required fields: Team, Agent, Date, and Type.",
+          title: t("validation.validationError"),
+          description: t("validation.requiredFields"),
           variant: "destructive",
         })
         return
@@ -341,8 +344,8 @@ export function TransactionsView({
       // Validate amount
       if (inlineFormData.amount <= 0) {
         toast({
-          title: "Validation Error",
-          description: "Amount must be greater than zero.",
+          title: t("validation.validationError"),
+          description: t("validation.amountGreaterThanZero"),
           variant: "destructive",
         })
         return
@@ -386,14 +389,14 @@ export function TransactionsView({
 
       // Show success toast
       toast({
-        title: t("transactionModal.updateSuccess") || "Update Successful",
-        description: t("transactionModal.updateSuccessDesc") || "Transaction has been updated successfully.",
+        title: t("transactionModal.updateSuccess"),
+        description: t("transactionModal.updateSuccessDesc"),
       })
     } catch (error) {
       console.error("Error saving inline edit:", error)
       toast({
-        title: "Error",
-        description: "Failed to update transaction. Please try again.",
+        title: t("common.error"),
+        description: t("transactionModal.updateError"),
         variant: "destructive",
       })
     } finally {
@@ -517,7 +520,10 @@ export function TransactionsView({
           <h2 className="text-lg font-semibold">{t("transactions.allTransactions")}</h2>
           <Button
             onClick={() => setShowTransactionModal(true)}
-            className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-700"
+            className={
+              primaryButtonClass ||
+              "bg-gradient-to-r from-gray-900 to-black hover:from-black hover:to-gray-800 text-white shadow-lg dark:shadow-white/5 hover:shadow-black/25 dark:hover:shadow-white/10 transition-all duration-300"
+            }
           >
             <Plus className="w-5 h-5" />
             <span>{t("transactions.addTransaction")}</span>
@@ -596,7 +602,7 @@ export function TransactionsView({
         )}
 
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full hidden md:table">
             <thead className="bg-muted/50">
               <tr>
                 <th className="px-4 py-3 text-left">
@@ -679,7 +685,16 @@ export function TransactionsView({
               {filteredTransactions.map((transaction) =>
                 editingInlineId === transaction.id ? (
                   // Inline editing row
-                  <tr key={transaction.id} className="bg-muted/30" ref={inlineFormRef}>
+                  <tr
+                    key={transaction.id}
+                    className={cn(
+                      "bg-muted/30",
+                      transaction.type === "Deposit"
+                        ? "bg-green-100/70 dark:bg-green-900/30"
+                        : "bg-red-100/70 dark:bg-red-900/30",
+                    )}
+                    ref={inlineFormRef}
+                  >
                     <td className="px-4 py-3 whitespace-nowrap">
                       <Checkbox
                         checked={selectedTransactions.includes(transaction.id)}
@@ -721,12 +736,21 @@ export function TransactionsView({
                       </Select>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <Input
-                        type="date"
-                        value={inlineFormData?.date}
-                        onChange={(e) => setInlineFormData({ ...inlineFormData!, date: e.target.value })}
-                        className="h-8 w-32"
-                      />
+                      <div className="relative">
+                        <Input
+                          type="date"
+                          value={inlineFormData?.date}
+                          onChange={(e) => setInlineFormData({ ...inlineFormData!, date: e.target.value })}
+                          className="h-8 w-32"
+                          // Safer approach for mobile support
+                          onClick={(e) => {
+                            // Try to focus and open the date picker in a safer way
+                            if (e.currentTarget) {
+                              e.currentTarget.focus()
+                            }
+                          }}
+                        />
+                      </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <Input
@@ -787,7 +811,12 @@ export function TransactionsView({
                   // Normal row (not being edited)
                   <tr
                     key={transaction.id}
-                    className="hover:bg-muted/50 transition-colors cursor-pointer"
+                    className={cn(
+                      "hover:bg-muted/50 transition-colors cursor-pointer",
+                      transaction.type === "Deposit"
+                        ? "bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30"
+                        : "bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30",
+                    )}
                     onClick={(e) => {
                       // Don't trigger row edit if clicking on checkbox, delete button, or notes icon
                       if (
@@ -852,6 +881,81 @@ export function TransactionsView({
               )}
             </tbody>
           </table>
+
+          {/* Add mobile card view for small screens */}
+          <div className="grid grid-cols-1 gap-4 md:hidden">
+            {filteredTransactions.map((transaction) => (
+              <div
+                key={transaction.id}
+                className={cn(
+                  "p-4 rounded-lg border border-border/40",
+                  transaction.type === "Deposit" ? "bg-green-50 dark:bg-green-900/20" : "bg-red-50 dark:bg-red-900/20",
+                )}
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={selectedTransactions.includes(transaction.id)}
+                      onCheckedChange={() => handleSelectTransaction(transaction.id)}
+                      aria-label={`Select transaction ${transaction.id}`}
+                    />
+                    <TeamBadge team={transaction.team} />
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => deleteTransaction(transaction.id)}
+                      className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                    {transaction.notes && (
+                      <button
+                        title={transaction.notes}
+                        className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
+                      >
+                        <StickyNote className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-y-2 text-sm">
+                  <div className="font-medium">{t("transactions.agent")}</div>
+                  <div>{t(`agents.${transaction.agent}`)}</div>
+
+                  <div className="font-medium">{t("transactions.date")}</div>
+                  <div>{formatTableDate(transaction.date)}</div>
+
+                  <div className="font-medium">{t("transactions.shopId")}</div>
+                  <div>{transaction.shopId}</div>
+
+                  <div className="font-medium">{t("transactions.amount")}</div>
+                  <div>${transaction.amount.toLocaleString()}</div>
+
+                  <div className="font-medium">{t("transactions.type")}</div>
+                  <div>
+                    <span
+                      className={cn(
+                        "inline-flex rounded-full px-2 py-0.5 text-xs font-semibold",
+                        transaction.type === "Deposit"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                          : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+                      )}
+                    >
+                      {t(`common.${transaction.type.toLowerCase()}`)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-3 pt-3 border-t border-border/40 flex justify-end">
+                  <Button size="sm" variant="outline" onClick={() => startInlineEdit(transaction)}>
+                    <Edit className="w-4 h-4 mr-2" />
+                    {t("common.edit")}
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </Card>
 

@@ -78,6 +78,7 @@ export function AgentsView({
   onAddAgent,
   onManageAgents,
   onManageTranslations,
+  primaryButtonClass,
 }: {
   selectedAgent: string | null
   setSelectedAgent: (agent: string | null) => void
@@ -87,6 +88,7 @@ export function AgentsView({
   onAddAgent: () => void
   onManageAgents: () => void
   onManageTranslations: () => void
+  primaryButtonClass?: string
 }) {
   // Add the translation hook
   const { t, i18n } = useTranslation()
@@ -153,7 +155,7 @@ export function AgentsView({
                 </Card>
 
                 {/* Statistics Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <Card className="border-border/40 shadow-md overflow-hidden">
                     <CardContent className="p-6 relative">
                       <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent"></div>
@@ -281,7 +283,13 @@ export function AgentsView({
         <div className="space-y-6">
           {/* Unified Agent Management Button */}
           <div className="flex justify-end">
-            <Button onClick={onManageAgents} className="bg-purple-600 hover:bg-purple-700 flex items-center gap-2">
+            <Button
+              onClick={onManageAgents}
+              className={
+                primaryButtonClass ||
+                "bg-gradient-to-r from-gray-900 to-black hover:from-black hover:to-gray-800 text-white shadow-lg dark:shadow-white/5 hover:shadow-black/25 dark:hover:shadow-white/10 transition-all duration-300"
+              }
+            >
               <Users className="w-4 h-4" />
               {t("agentModal.manageAgents")}
             </Button>

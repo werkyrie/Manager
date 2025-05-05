@@ -169,6 +169,33 @@ export function NotesView() {
   const [unsavedChanges, setUnsavedChanges] = useState<Note | null>(null)
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false)
 
+  // Add escape key handler for note editor
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        if (editingNote) {
+          // If we have unsaved changes, show confirmation dialog
+          if (autoSaveTimerRef.current) {
+            setShowUnsavedDialog(true)
+          } else {
+            setEditingNote(null)
+            setIsCreatingNote(false)
+          }
+        } else if (showRecycleBin) {
+          setShowRecycleBin(false)
+        }
+      }
+    }
+
+    // Add event listener
+    document.addEventListener("keydown", handleEscapeKey)
+
+    // Clean up
+    return () => {
+      document.removeEventListener("keydown", handleEscapeKey)
+    }
+  }, [editingNote, showRecycleBin, autoSaveTimerRef])
+
   // Load notes from localStorage on component mount
   // Replace the useEffect for loading notes with:
   // Load notes from Firebase on component mount
@@ -203,8 +230,8 @@ export function NotesView() {
       } catch (error) {
         console.error("Error loading notes data:", error)
         toast({
-          title: "Error",
-          description: "Failed to load notes. Please try again.",
+          title: t("notes.loadError"),
+          description: t("notes.loadErrorDesc"),
           variant: "destructive",
         })
       } finally {
@@ -318,15 +345,15 @@ export function NotesView() {
         const savedNote = await addNoteToFirebase(updatedNote)
         setNotes((prev) => [savedNote, ...prev])
         toast({
-          title: "Note Created",
-          description: "Your note has been created successfully.",
+          title: t("notes.noteCreated"),
+          description: t("notes.noteCreatedDesc"),
         })
       } else {
         const savedNote = await updateNoteInFirebase(updatedNote)
         setNotes((prev) => prev.map((n) => (n.id === note.id ? savedNote : n)))
         toast({
-          title: "Note Updated",
-          description: "Your note has been updated successfully.",
+          title: t("notes.noteUpdated"),
+          description: t("notes.noteUpdatedDesc"),
         })
       }
 
@@ -344,8 +371,8 @@ export function NotesView() {
     } catch (error) {
       console.error("Error saving note:", error)
       toast({
-        title: "Error",
-        description: "Failed to save note. Please try again.",
+        title: t("common.error"),
+        description: t("notes.saveError"),
         variant: "destructive",
       })
     } finally {
@@ -362,8 +389,8 @@ export function NotesView() {
     autoSaveTimerRef.current = setTimeout(() => {
       localStorage.setItem("unsavedDraft", JSON.stringify(note))
       toast({
-        title: "Draft Saved",
-        description: "Your changes have been saved as a draft.",
+        title: t("notes.draftSaved"),
+        description: t("notes.draftSavedDesc"),
       })
     }, 5000) // Auto-save after 5 seconds of inactivity
   }
@@ -382,6 +409,8 @@ export function NotesView() {
     localStorage.removeItem("unsavedDraft")
     setUnsavedChanges(null)
     setShowUnsavedDialog(false)
+    setEditingNote(null)
+    setIsCreatingNote(false)
   }
 
   // Delete a note
@@ -400,15 +429,15 @@ export function NotesView() {
         setDeletedNotes(updatedDeletedNotes)
 
         toast({
-          title: "Note Moved to Recycle Bin",
-          description: "The note has been moved to the recycle bin.",
+          title: t("notes.noteMoved"),
+          description: t("notes.noteMovedDesc"),
         })
       }
     } catch (error) {
       console.error("Error deleting note:", error)
       toast({
-        title: "Error",
-        description: "Failed to delete note. Please try again.",
+        title: t("common.error"),
+        description: t("notes.deleteError"),
         variant: "destructive",
       })
     } finally {
@@ -430,15 +459,15 @@ export function NotesView() {
         setNotes((prev) => [restoredNote, ...prev])
 
         toast({
-          title: "Note Restored",
-          description: "The note has been restored successfully.",
+          title: t("notes.noteRestored"),
+          description: t("notes.noteRestoredDesc"),
         })
       }
     } catch (error) {
       console.error("Error restoring note:", error)
       toast({
-        title: "Error",
-        description: "Failed to restore note. Please try again.",
+        title: t("common.error"),
+        description: t("notes.restoreError"),
         variant: "destructive",
       })
     } finally {
@@ -458,15 +487,15 @@ export function NotesView() {
         setDeletedNotes((prev) => prev.filter((note) => note.id !== id))
 
         toast({
-          title: "Note Deleted",
-          description: "The note has been permanently deleted.",
+          title: t("notes.noteDeleted"),
+          description: t("notes.noteDeletedDesc"),
         })
       }
     } catch (error) {
       console.error("Error permanently deleting note:", error)
       toast({
-        title: "Error",
-        description: "Failed to delete note. Please try again.",
+        title: t("common.error"),
+        description: t("notes.deleteError"),
         variant: "destructive",
       })
     } finally {
@@ -488,14 +517,14 @@ export function NotesView() {
       setDeletedNotes([])
 
       toast({
-        title: "Recycle Bin Emptied",
-        description: "All deleted notes have been permanently removed.",
+        title: t("notes.binEmptied"),
+        description: t("notes.binEmptiedDesc"),
       })
     } catch (error) {
       console.error("Error emptying recycle bin:", error)
       toast({
-        title: "Error",
-        description: "Failed to empty recycle bin. Please try again.",
+        title: t("common.error"),
+        description: t("notes.emptyBinError"),
         variant: "destructive",
       })
     } finally {
@@ -530,8 +559,8 @@ export function NotesView() {
     } catch (error) {
       console.error("Error toggling pin status:", error)
       toast({
-        title: "Error",
-        description: "Failed to update note. Please try again.",
+        title: t("notes.togglePinError"),
+        description: t("notes.togglePinErrorDesc"),
         variant: "destructive",
       })
     }
@@ -566,8 +595,8 @@ export function NotesView() {
       } catch (error) {
         console.error("Error adding new label:", error)
         toast({
-          title: "Error",
-          description: "Failed to add new label. Please try again.",
+          title: t("notes.addLabelError"),
+          description: t("notes.addLabelErrorDesc"),
           variant: "destructive",
         })
       }
@@ -623,14 +652,14 @@ export function NotesView() {
     return (
       <div className="space-y-4">
         <Input
-          placeholder="Title"
+          placeholder={t("notes.titlePlaceholder")}
           value={editedNote.title}
           onChange={(e) => updateNote({ title: e.target.value })}
           className="text-lg font-medium"
         />
 
         <Textarea
-          placeholder="Note content..."
+          placeholder={t("notes.contentPlaceholder")}
           value={editedNote.content}
           onChange={(e) => updateNote({ content: e.target.value })}
           className="min-h-[200px] resize-y"
@@ -651,7 +680,7 @@ export function NotesView() {
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm">
                   <Palette className="h-4 w-4 mr-2" />
-                  Color
+                  {t("notes.color")}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-64">
@@ -681,12 +710,12 @@ export function NotesView() {
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm">
                   <Tag className="h-4 w-4 mr-2" />
-                  Labels
+                  {t("notes.labels")}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-64">
                 <div className="space-y-2">
-                  <div className="font-medium">Select Labels</div>
+                  <div className="font-medium">{t("notes.selectLabels")}</div>
                   <div className="space-y-1">
                     {availableLabels.map((label) => (
                       <div key={label} className="flex items-center space-x-2">
@@ -702,13 +731,13 @@ export function NotesView() {
                   <div className="pt-2 border-t">
                     <div className="flex items-center space-x-2">
                       <Input
-                        placeholder="New label"
+                        placeholder={t("notes.newLabel")}
                         value={newLabel}
                         onChange={(e) => setNewLabel(e.target.value)}
                         className="h-8"
                       />
                       <Button size="sm" onClick={addNewLabel} disabled={!newLabel}>
-                        Add
+                        {t("notes.add")}
                       </Button>
                     </div>
                   </div>
@@ -720,12 +749,12 @@ export function NotesView() {
               {editedNote.isPinned ? (
                 <>
                   <PinOff className="h-4 w-4 mr-2" />
-                  Unpin
+                  {t("notes.unpin")}
                 </>
               ) : (
                 <>
                   <Pin className="h-4 w-4 mr-2" />
-                  Pin
+                  {t("notes.pin")}
                 </>
               )}
             </Button>
@@ -733,16 +762,16 @@ export function NotesView() {
 
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={onCancel}>
-              Cancel
+              {t("notes.cancel")}
             </Button>
             <Button
               size="sm"
               onClick={() => onSave(editedNote)}
               disabled={!editedNote.title.trim()}
-              className="bg-purple-600 hover:bg-purple-700"
+              className="bg-gradient-to-r from-gray-900 to-black hover:from-black hover:to-gray-800 text-white shadow-lg dark:shadow-white/5 hover:shadow-black/25 dark:hover:shadow-white/10 transition-all duration-300"
             >
               <Save className="h-4 w-4 mr-2" />
-              Save
+              {t("notes.save")}
             </Button>
           </div>
         </div>
@@ -788,7 +817,9 @@ export function NotesView() {
           <div className="flex justify-between items-center text-xs text-muted-foreground mt-4 pt-2 border-t border-border/40">
             <div className="flex items-center">
               <Clock className="h-3 w-3 mr-1" />
-              <span>Updated {formatDate(note.updatedAt)}</span>
+              <span>
+                {t("notes.updated")} {formatDate(note.updatedAt)}
+              </span>
             </div>
 
             <div className="flex items-center gap-1">
@@ -797,7 +828,7 @@ export function NotesView() {
                 size="sm"
                 className="h-7 w-7 p-0"
                 onClick={() => togglePin(note.id)}
-                title={note.isPinned ? "Unpin" : "Pin"}
+                title={note.isPinned ? t("notes.unpin") : t("notes.pin")}
               >
                 {note.isPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
               </Button>
@@ -810,7 +841,7 @@ export function NotesView() {
                   setEditingNote(note)
                   setIsCreatingNote(false)
                 }}
-                title="Edit"
+                title={t("notes.edit")}
               >
                 <Edit className="h-4 w-4" />
               </Button>
@@ -820,7 +851,7 @@ export function NotesView() {
                 size="sm"
                 className="h-7 w-7 p-0 text-red-500 hover:text-red-600"
                 onClick={() => deleteNote(note.id)}
-                title="Delete"
+                title={t("notes.delete")}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -864,7 +895,9 @@ export function NotesView() {
                   <div className="flex justify-between items-center text-xs text-muted-foreground mt-4 pt-2 border-t border-border/40">
                     <div className="flex items-center">
                       <Clock className="h-3 w-3 mr-1" />
-                      <span>Deleted {formatDate(note.updatedAt)}</span>
+                      <span>
+                        {t("notes.deleted")} {formatDate(note.updatedAt)}
+                      </span>
                     </div>
 
                     <div className="flex items-center gap-1">
@@ -873,7 +906,7 @@ export function NotesView() {
                         size="sm"
                         className="h-7 w-7 p-0"
                         onClick={() => restoreNote(note.id)}
-                        title="Restore"
+                        title={t("notes.restore")}
                       >
                         <RotateCcw className="h-4 w-4" />
                       </Button>
@@ -883,7 +916,7 @@ export function NotesView() {
                         size="sm"
                         className="h-7 w-7 p-0 text-red-500 hover:text-red-600"
                         onClick={() => permanentlyDeleteNote(note.id)}
-                        title="Delete Permanently"
+                        title={t("notes.deletePermanently")}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -1049,7 +1082,11 @@ export function NotesView() {
               variant={activeTab === "all" ? "default" : "outline"}
               size="sm"
               onClick={() => setActiveTab("all")}
-              className={activeTab === "all" ? "bg-purple-600 hover:bg-purple-700" : ""}
+              className={
+                activeTab === "all"
+                  ? "bg-gradient-to-r from-gray-900 to-black hover:from-black hover:to-gray-800 text-white shadow-lg dark:shadow-white/5 hover:shadow-black/25 dark:hover:shadow-white/10 transition-all duration-300"
+                  : ""
+              }
             >
               {t("notes.all")}
             </Button>
@@ -1058,7 +1095,11 @@ export function NotesView() {
               variant={activeTab === "pinned" ? "default" : "outline"}
               size="sm"
               onClick={() => setActiveTab("pinned")}
-              className={activeTab === "pinned" ? "bg-purple-600 hover:bg-purple-700" : ""}
+              className={
+                activeTab === "pinned"
+                  ? "bg-gradient-to-r from-gray-900 to-black hover:from-black hover:to-gray-800 text-white shadow-lg dark:shadow-white/5 hover:shadow-black/25 dark:hover:shadow-white/10 transition-all duration-300"
+                  : ""
+              }
             >
               <Pin className="h-4 w-4 mr-2" />
               {t("notes.pinned")}
@@ -1092,7 +1133,7 @@ export function NotesView() {
       <NotesFilter />
 
       {/* Notes Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {getFilteredNotes().map((note) => (
           <NoteCard key={note.id} note={note} />
         ))}
@@ -1102,7 +1143,10 @@ export function NotesView() {
       {getFilteredNotes().length === 0 && (
         <div className="text-center py-12">
           <p className="text-muted-foreground mb-4">{t("notes.noNotes")}</p>
-          <Button onClick={createNote} className="bg-purple-600 hover:bg-purple-700">
+          <Button
+            onClick={createNote}
+            className="bg-gradient-to-r from-gray-900 to-black hover:from-black hover:to-gray-800 text-white shadow-lg dark:shadow-white/5 hover:shadow-black/25 dark:hover:shadow-white/10 transition-all duration-300"
+          >
             <Plus className="h-4 w-4 mr-2" />
             {t("notes.createNote")}
           </Button>
@@ -1126,7 +1170,10 @@ export function NotesView() {
               <Button variant="outline" onClick={discardUnsavedDraft}>
                 {t("notes.discard")}
               </Button>
-              <Button onClick={restoreUnsavedDraft} className="bg-purple-600 hover:bg-purple-700">
+              <Button
+                onClick={restoreUnsavedDraft}
+                className="bg-gradient-to-r from-gray-900 to-black hover:from-black hover:to-gray-800 text-white shadow-lg dark:shadow-white/5 hover:shadow-black/25 dark:hover:shadow-white/10 transition-all duration-300"
+              >
                 {t("notes.restore")}
               </Button>
             </div>

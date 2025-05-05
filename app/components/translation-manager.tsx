@@ -107,7 +107,7 @@ export function TranslationManager({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <div className="flex space-x-4">
+          <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
             <div className="flex-1">
               <Label htmlFor="language">Language</Label>
               <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
@@ -141,7 +141,7 @@ export function TranslationManager({
                 <p className="text-center text-muted-foreground">No agents found for this team.</p>
               ) : (
                 Object.entries(translations).map(([agent, translation]) => (
-                  <div key={agent} className="grid grid-cols-2 gap-4 items-center">
+                  <div key={agent} className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
                     <div>
                       <Label htmlFor={`translation-${agent}`}>{agent}</Label>
                     </div>

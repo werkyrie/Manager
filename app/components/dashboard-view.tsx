@@ -122,7 +122,7 @@ export function DashboardView({
       </Card>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="border-border/40 shadow-md overflow-hidden">
           <CardContent className="p-6 relative">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent"></div>
@@ -202,7 +202,7 @@ export function DashboardView({
       </div>
 
       {/* Team Performance Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Hotel Team Card */}
         <Card className="border-border/40 shadow-md overflow-hidden">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
@@ -216,7 +216,7 @@ export function DashboardView({
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="bg-muted/50 p-3 rounded-lg">
                   <p className="text-sm text-muted-foreground">{t("dashboard.deposits")}</p>
                   <p className="text-xl font-bold text-green-600 dark:text-green-400">
@@ -275,7 +275,7 @@ export function DashboardView({
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="bg-muted/50 p-3 rounded-lg">
                   <p className="text-sm text-muted-foreground">{t("dashboard.deposits")}</p>
                   <p className="text-xl font-bold text-green-600 dark:text-green-400">

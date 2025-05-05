@@ -45,7 +45,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-gradient-to-br from-purple-900 via-violet-800 to-indigo-900">
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-gradient-to-br from-black via-gray-800 to-gray-900">
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden">
         {[...Array(20)].map((_, i) => (
@@ -119,7 +119,7 @@ export default function LoginPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:border-purple-400 focus:ring-purple-400"
+                    className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:border-gray-400 focus:ring-gray-400"
                   />
                 </div>
               </motion.div>
@@ -135,7 +135,7 @@ export default function LoginPage() {
                   </Label>
                   <Link
                     href="/reset-password"
-                    className="text-sm text-purple-300 hover:text-purple-200 hover:underline transition-colors"
+                    className="text-sm text-gray-300 hover:text-white hover:underline transition-colors"
                   >
                     {t("auth.forgotPassword")}
                   </Link>
@@ -148,7 +148,7 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:border-purple-400 focus:ring-purple-400"
+                    className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:border-gray-400 focus:ring-gray-400"
                   />
                 </div>
               </motion.div>
@@ -163,7 +163,7 @@ export default function LoginPage() {
                 <Button
                   type="submit"
                   className={cn(
-                    "w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-lg transition-all duration-300 hover:shadow-purple-500/25",
+                    "w-full bg-gradient-to-r from-gray-900 to-black hover:from-black hover:to-gray-800 text-white shadow-lg transition-all duration-300 hover:shadow-black/25",
                     isLoading && "opacity-80",
                   )}
                   disabled={isLoading}
@@ -188,10 +188,7 @@ export default function LoginPage() {
                 className="text-center text-sm text-gray-200"
               >
                 {t("auth.noAccount")}{" "}
-                <Link
-                  href="/signup"
-                  className="text-purple-300 hover:text-purple-200 hover:underline transition-colors"
-                >
+                <Link href="/signup" className="text-gray-300 hover:text-white hover:underline transition-colors">
                   {t("auth.createAccount")}
                 </Link>
               </motion.div>

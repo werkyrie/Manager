@@ -39,7 +39,8 @@ export function FloatingActionButton({
               variant={variant}
               className={cn(
                 "rounded-full w-14 h-14 shadow-lg",
-                variant === "default" && "bg-purple-600 hover:bg-purple-700",
+                variant === "default" &&
+                  "bg-gradient-to-r from-gray-900 to-black hover:from-black hover:to-gray-800 text-white shadow-lg dark:shadow-white/5 hover:shadow-black/25 dark:hover:shadow-white/10 transition-all duration-300",
               )}
             >
               {icon}

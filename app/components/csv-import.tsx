@@ -2,10 +2,9 @@
 
 import type React from "react"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, FileUp, Check, X } from "lucide-react"
@@ -55,6 +54,23 @@ export function CSVImport({
   const [isPreview, setIsPreview] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { t } = useTranslation()
+
+  // Add escape key handler
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onCancel()
+      }
+    }
+
+    // Add event listener
+    document.addEventListener("keydown", handleEscapeKey)
+
+    // Clean up
+    return () => {
+      document.removeEventListener("keydown", handleEscapeKey)
+    }
+  }, [onCancel])
 
   // Parse CSV file
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -234,14 +250,22 @@ export function CSVImport({
                   {t("import.uploadCSV")}
                 </Label>
                 <p className="text-muted-foreground mb-4">{t("import.csvRequirements")}</p>
-                <Input
-                  id="csv-file"
-                  type="file"
-                  accept=".csv"
-                  onChange={handleFileUpload}
-                  ref={fileInputRef}
-                  className="max-w-sm mx-auto"
-                />
+                <div className="flex items-center justify-center gap-2 max-w-sm mx-auto">
+                  <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full">
+                    {t("import.chooseFile")}
+                  </Button>
+                  <input
+                    id="csv-file"
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileUpload}
+                    ref={fileInputRef}
+                    className="hidden"
+                  />
+                  <span className="text-muted-foreground">
+                    {fileInputRef.current?.files?.[0]?.name || t("import.noFileChosen")}
+                  </span>
+                </div>
               </div>
 
               {errors.length > 0 && (
@@ -355,7 +379,7 @@ export function CSVImport({
           )}
         </CardContent>
 
-        <CardFooter className="border-t bg-muted/20 p-4 flex justify-end space-x-2">
+        <CardFooter className="border-t bg-muted/20 p-4 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:space-x-2">
           {isPreview ? (
             <>
               <Button variant="outline" onClick={handleReset}>

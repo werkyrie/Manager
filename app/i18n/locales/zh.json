@@ -89,9 +89,46 @@
     "pinned": "已固定",
     "createNewNote": "创建新笔记",
     "editNote": "编辑笔记",
-    "all": "所有说明",
-    "createNote": "创建注释",
-    "noNotes": "未找到笔记"
+    "all": "所有笔记",
+    "createNote": "创建笔记",
+    "noNotes": "未找到笔记",
+    "titlePlaceholder": "标题",
+    "contentPlaceholder": "笔记内容...",
+    "draftSaved": "草稿已保存",
+    "draftSavedDesc": "您的更改已保存为草稿。",
+    "noteCreated": "笔记已创建",
+    "noteCreatedDesc": "您的笔记已成功创建。",
+    "noteUpdated": "笔记已更新",
+    "noteUpdatedDesc": "您的笔记已成功更新。",
+    "noteMoved": "笔记已移至回收站",
+    "noteMovedDesc": "笔记已移至回收站。",
+    "noteRestored": "笔记已恢复",
+    "noteRestoredDesc": "笔记已成功恢复。",
+    "noteDeleted": "笔记已删除",
+    "noteDeletedDesc": "笔记已永久删除。",
+    "binEmptied": "回收站已清空",
+    "binEmptiedDesc": "所有已删除的笔记已永久移除。",
+    "unsavedChanges": "未保存的更改",
+    "unsavedChangesDesc": "您有未保存的更改。是否要恢复它们？",
+    "discard": "丢弃",
+    "filterByPinned": "按固定状态筛选",
+    "filterByLabels": "按标签筛选",
+    "sortBy": "排序方式",
+    "selectFilter": "选择筛选条件",
+    "pinnedOnly": "仅显示已固定",
+    "unpinnedOnly": "仅显示未固定",
+    "selectSortField": "选择排序字段",
+    "lastUpdated": "最后更新",
+    "dateCreated": "创建日期",
+    "title": "标题",
+    "selectSortDirection": "选择排序方向",
+    "ascending": "升序",
+    "descending": "降序",
+    "resetFilters": "重置筛选条件",
+    "saveError": "保存笔记失败。请重试。",
+    "deleteError": "删除笔记失败。请重试。",
+    "restoreError": "恢复笔记失败。请重试。",
+    "emptyBinError": "清空回收站失败。请重试。"
   },
   "transactionModal": {
     "editTransaction": "编辑交易",
@@ -110,7 +147,24 @@
     "update": "更新",
     "add": "添加",
     "transaction": "交易",
-    "details": "详情"
+    "details": "详情",
+    "transactionAdded": "交易已添加",
+    "transactionAddedDesc": "成功添加了新的{{type}}交易。",
+    "transactionUpdated": "交易已更新",
+    "transactionUpdatedDesc": "成功更新了交易。",
+    "transactionDeleted": "交易已删除",
+    "transactionDeletedDesc": "交易已成功删除。",
+    "addError": "添加交易失败。请重试。",
+    "updateError": "更新交易失败。请重试。",
+    "deleteError": "删除交易失败。请重试。",
+    "notFound": "未找到交易",
+    "updateSuccess": "更新成功",
+    "updateSuccessDesc": "交易已成功更新。",
+    "updatingTransaction": "更新交易中",
+    "updatingTransactionDesc": "请稍候，我们正在更新您的交易...",
+    "addingTransaction": "添加交易中",
+    "addingTransactionDesc": "请稍候，我们正在添加您的交易...",
+    "newTransactionAddedDesc": "新交易已成功添加。"
   },
   "common": {
     "hotel": "酒店",
@@ -122,7 +176,12 @@
     "transactions": "交易",
     "netBalance": "净余额",
     "loading": "加载数据中...",
-    "saving": "保存中..."
+    "saving": "保存中...",
+    "edit": "编辑",
+    "error": "错误",
+    "loadError": "加载数据失败。请重试。",
+    "unexpectedError": "发生意外错误。请重试。",
+    "close": "关闭"
   },
   "months": {
     "january": "一月",
@@ -164,7 +223,9 @@
     "typeChangeSuccess": "成功更新交易类型。",
     "teamChangeSuccess": "成功更新交易团队。",
     "dateChangeSuccess": "成功更新交易日期。",
-    "amountChangeSuccess": "成功更新交易金额。"
+    "amountChangeSuccess": "成功更新交易金额。",
+    "updateError": "更新交易失败。请重试。",
+    "deleteError": "删除某些交易失败。数据已恢复。"
   },
   "receipt": {
     "receipt": "收据",
@@ -225,7 +286,10 @@
     "updateProfile": "更新资料"
   },
   "validation": {
-    "allFieldsRequired": "所有字段均为必填字段。请填写所有字段。"
+    "allFieldsRequired": "所有字段均为必填字段。请填写所有字段。",
+    "validationError": "验证错误",
+    "requiredFields": "请填写所有必填字段：团队、代理、日期和类型。",
+    "amountGreaterThanZero": "金额必须大于零。"
   },
   "agentModal": {
     "addAgent": "添加代理",
@@ -246,6 +310,8 @@
     "deleteWarning": "此操作无法撤消。",
     "confirmDeleteDesc": "您确定要从 {{team}} 团队中删除 {{name}} 吗？",
     "noAgents": "此团队没有找到代理。",
+    "cannotDelete": "无法删除代理",
+    "hasTransactions": "此代理有 {{count}} 个交易。请先重新分配或删除这些交易。",
     "tips": {
       "uniqueNames": "代理名称在团队内必须唯一",
       "addTranslations": "添加代理后，您可以在翻译标签页中添加翻译",
@@ -300,6 +366,9 @@
     "importErrors": "导入错误",
     "row": "行",
     "back": "返回",
-    "andMoreRows": "... 以及 {{count}} 个更多行"
+    "andMoreRows": "... 以及 {{count}} 个更多行",
+    "importSuccess": "导入成功",
+    "importSuccessDesc": "成功导入 {{count}} 个交易。",
+    "importError": "导入交易失败。请重试。"
   }
 }

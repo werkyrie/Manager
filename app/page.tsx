@@ -16,6 +16,7 @@ import {
   StickyNote,
   Loader2,
   Server,
+  X,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -222,6 +223,17 @@ export default function Page() {
   const [agentOptions, setAgentOptions] = useState<Record<string, string[]>>(agentOptionsInitialState)
   // Add this state in the Page component
 
+  // Add state for background operations
+  const [backgroundOperations, setBackgroundOperations] = useState<{
+    adding: boolean
+    editing: boolean
+    deleting: boolean
+  }>({
+    adding: false,
+    editing: false,
+    deleting: false,
+  })
+
   // Dashboard filters
   const [dashboardFilters, setDashboardFilters] = useState<DashboardFilters>({
     team: "all",
@@ -238,24 +250,44 @@ export default function Page() {
         return false
       }
 
+      // Optimistically update UI
+      setAgentOptions((prev) => ({
+        ...prev,
+        [team]: [...prev[team], agentName],
+      }))
+
       // Add agent to Firebase
       const success = await addAgentToFirebase(team, agentName)
 
-      if (success) {
-        // Update local state
+      if (!success) {
+        // Revert UI if operation failed
         setAgentOptions((prev) => ({
           ...prev,
-          [team]: [...prev[team], agentName],
+          [team]: prev[team].filter((agent) => agent !== agentName),
         }))
-        console.log(`Added ${agentName} to ${team} team`)
+
+        toast({
+          title: t("agentModal.addError"),
+          description: t("agentModal.addError"),
+          variant: "destructive",
+        })
+        return false
       }
 
+      console.log(`Added ${agentName} to ${team} team`)
       return success
     } catch (error) {
       console.error("Error adding agent:", error)
+
+      // Revert UI on error
+      setAgentOptions((prev) => ({
+        ...prev,
+        [team]: prev[team].filter((agent) => agent !== agentName),
+      }))
+
       toast({
-        title: "Error",
-        description: "Failed to add agent. Please try again.",
+        title: t("agentModal.addError"),
+        description: t("agentModal.addError"),
         variant: "destructive",
       })
       return false
@@ -270,34 +302,50 @@ export default function Page() {
 
       if (agentTransactions.length > 0) {
         toast({
-          title: "Cannot Delete Agent",
-          description: `This agent has ${agentTransactions.length} transactions. Please reassign or delete these transactions first.`,
+          title: t("agentModal.cannotDelete"),
+          description: t("agentModal.hasTransactions", { count: agentTransactions.length }),
           variant: "destructive",
         })
         return false
       }
 
+      // Optimistically update UI
+      const originalAgents = [...agentOptions[team]]
+      setAgentOptions((prev) => ({
+        ...prev,
+        [team]: prev[team].filter((agent) => agent !== agentName),
+      }))
+
       // Delete agent from Firebase
       const success = await deleteAgentFromFirebase(team, agentName)
 
-      if (success) {
-        // Update local state
+      if (!success) {
+        // Revert UI if operation failed
         setAgentOptions((prev) => ({
           ...prev,
-          [team]: prev[team].filter((agent) => agent !== agentName),
+          [team]: originalAgents,
         }))
+
         toast({
-          title: "Agent Deleted",
-          description: `${agentName} has been removed from the ${team} team.`,
+          title: t("agentModal.deleteError"),
+          description: t("agentModal.deleteError"),
+          variant: "destructive",
         })
+        return false
       }
 
+      toast({
+        title: t("agentModal.agentDeleted"),
+        description: t("agentModal.agentDeletedDesc", { name: agentName, team: t(`common.${team.toLowerCase()}`) }),
+      })
       return success
     } catch (error) {
       console.error("Error deleting agent:", error)
+
+      // Revert UI on error
       toast({
-        title: "Error",
-        description: "Failed to delete agent. Please try again.",
+        title: t("agentModal.deleteError"),
+        description: t("agentModal.deleteError"),
         variant: "destructive",
       })
       return false
@@ -342,8 +390,8 @@ export default function Page() {
       } catch (error) {
         console.error("Error loading data:", error)
         toast({
-          title: "Error",
-          description: "Failed to load data. Please try again.",
+          title: t("common.error"),
+          description: t("common.loadError"),
           variant: "destructive",
         })
       } finally {
@@ -444,6 +492,7 @@ export default function Page() {
     try {
       // Create a temporary ID for optimistic UI update
       const tempId = Date.now() + Math.floor(Math.random() * 1000) // Add randomness to ensure uniqueness
+      const actualId = nextId
 
       // Create a temporary transaction object for the UI
       const tempTransaction: Transaction = {
@@ -454,43 +503,58 @@ export default function Page() {
       // Optimistically update the UI immediately
       setTransactions((prev) => [...prev, tempTransaction])
 
-      // Show a loading toast
-      toast({
-        title: "Adding Transaction",
-        description: "Your transaction is being saved...",
-      })
-
       // Close the modal immediately to improve perceived performance
       setShowTransactionModal(false)
 
+      // Set background operation flag
+      setBackgroundOperations((prev) => ({ ...prev, adding: true }))
+
       // Actually save the transaction in the background
-      const newTransaction = await addTransactionToFirebase({
-        ...transaction,
-        id: nextId,
-      })
+      try {
+        const newTransaction = await addTransactionToFirebase({
+          ...transaction,
+          id: actualId,
+        })
 
-      // Update the transactions list with the real transaction from Firebase
-      setTransactions((prev) => prev.map((t) => (t.id === tempId ? newTransaction : t)))
+        // Update the transactions list with the real transaction from Firebase
+        setTransactions((prev) => prev.map((t) => (t.id === tempId ? newTransaction : t)))
 
-      setNextId((prev) => prev + 1)
+        setNextId((prev) => prev + 1)
 
-      // Show success toast
-      toast({
-        title: "Transaction Added",
-        description: `Successfully added a new ${transaction.type.toLowerCase()} transaction.`,
-        action: (
-          <ToastAction altText="Close">
-            <Check className="h-4 w-4" />
-          </ToastAction>
-        ),
-      })
+        // Show success toast
+        toast({
+          title: t("transactionModal.transactionAdded"),
+          description: t("transactionModal.transactionAddedDesc", {
+            type: t(`common.${transaction.type.toLowerCase()}`),
+          }),
+          action: (
+            <ToastAction altText={t("common.close")}>
+              <Check className="h-4 w-4" />
+            </ToastAction>
+          ),
+        })
 
-      return newTransaction
+        return newTransaction
+      } catch (error) {
+        console.error("Error adding transaction:", error)
+
+        // Remove the temporary transaction on error
+        setTransactions((prev) => prev.filter((t) => t.id !== tempId))
+
+        toast({
+          title: t("common.error"),
+          description: t("transactionModal.addError"),
+          variant: "destructive",
+        })
+        throw error
+      } finally {
+        setBackgroundOperations((prev) => ({ ...prev, adding: false }))
+      }
     } catch (error) {
-      console.error("Error adding transaction:", error)
+      console.error("Error in add transaction flow:", error)
       toast({
-        title: "Error",
-        description: "Failed to add transaction. Please try again.",
+        title: t("common.error"),
+        description: t("transactionModal.addError"),
         variant: "destructive",
       })
       throw error
@@ -499,98 +563,130 @@ export default function Page() {
 
   const updateTransaction = async (transaction: Transaction) => {
     try {
-      setIsLoading(true)
+      // Store the original transaction for rollback if needed
+      const originalTransactions = [...transactions]
+      const originalTransaction = originalTransactions.find((t) => t.id === transaction.id)
 
-      // Add detailed logging to help diagnose the issue
-      console.log(
-        "Updating transaction:",
-        JSON.stringify({
-          id: transaction.id,
-          firebaseId: transaction.firebaseId,
-          hasReceipt: !!transaction.receipt,
-          receiptType: transaction.receipt ? (transaction.receipt.startsWith("data:") ? "base64" : "url") : "none",
-        }),
-      )
-
-      // Check if firebaseId exists, if not, try to find it
-      if (!transaction.firebaseId) {
-        console.log("Transaction missing firebaseId, searching in existing transactions...")
-        // Find the existing transaction to get its firebaseId
-        const existingTransaction = transactions.find((t) => t.id === transaction.id)
-
-        if (existingTransaction && existingTransaction.firebaseId) {
-          console.log("Found matching transaction with firebaseId:", existingTransaction.firebaseId)
-          transaction.firebaseId = existingTransaction.firebaseId
-        } else {
-          console.error("Could not find transaction with id:", transaction.id)
-          throw new Error("Transaction doesn't have a Firestore ID and couldn't be found in local state")
-        }
+      if (!originalTransaction) {
+        throw new Error("Transaction not found")
       }
 
-      const updatedTransaction = await updateTransactionInFirebase(transaction)
+      // Optimistically update the UI
+      setTransactions((prev) => prev.map((t) => (t.id === transaction.id ? transaction : t)))
 
-      // Update the transactions state with the updated transaction
-      setTransactions((prev) => prev.map((t) => (t.id === transaction.id ? updatedTransaction : t)))
-
+      // Close the modal immediately
       setEditingTransaction(null)
       setShowTransactionModal(false)
 
+      // Set background operation flag
+      setBackgroundOperations((prev) => ({ ...prev, editing: true }))
+
+      try {
+        // Check if firebaseId exists, if not, try to find it
+        if (!transaction.firebaseId) {
+          console.log("Transaction missing firebaseId, searching in existing transactions...")
+          // Find the existing transaction to get its firebaseId
+          const existingTransaction = originalTransactions.find((t) => t.id === transaction.id)
+
+          if (existingTransaction && existingTransaction.firebaseId) {
+            console.log("Found matching transaction with firebaseId:", existingTransaction.firebaseId)
+            transaction.firebaseId = existingTransaction.firebaseId
+          } else {
+            console.error("Could not find transaction with id:", transaction.id)
+            throw new Error("Transaction doesn't have a Firestore ID and couldn't be found in local state")
+          }
+        }
+
+        const updatedTransaction = await updateTransactionInFirebase(transaction)
+
+        // Update the transactions state with the updated transaction from Firebase
+        setTransactions((prev) => prev.map((t) => (t.id === transaction.id ? updatedTransaction : t)))
+
+        // Show success toast
+        toast({
+          title: t("transactionModal.transactionUpdated"),
+          description: t("transactionModal.transactionUpdatedDesc"),
+          action: (
+            <ToastAction altText={t("common.close")}>
+              <Check className="h-4 w-4" />
+            </ToastAction>
+          ),
+        })
+
+        return updatedTransaction
+      } catch (error) {
+        console.error("Error updating transaction:", error)
+
+        // Revert to original state on error
+        setTransactions(originalTransactions)
+
+        toast({
+          title: t("common.error"),
+          description: error instanceof Error ? error.message : t("transactionModal.updateError"),
+          variant: "destructive",
+        })
+
+        throw error
+      } finally {
+        setBackgroundOperations((prev) => ({ ...prev, editing: false }))
+      }
+    } catch (error) {
+      console.error("Error in update transaction flow:", error)
+      toast({
+        title: t("common.error"),
+        description: "Failed to update transaction. Please try again.",
+        variant: "destructive",
+      })
+      throw error
+    }
+  }
+
+  const deleteTransaction = async (id: number) => {
+    // Store the transaction for potential rollback
+    const transactionToDelete = transactions.find((t) => t.id === id)
+
+    if (!transactionToDelete) {
+      toast({
+        title: t("common.error"),
+        description: t("transactionModal.notFound"),
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Optimistically update UI
+    setTransactions((prev) => prev.filter((t) => t.id !== id))
+
+    // Set background operation flag
+    setBackgroundOperations((prev) => ({ ...prev, deleting: true }))
+
+    try {
+      // Delete from Firebase in the background
+      await deleteTransactionFromFirebase(transactionToDelete)
+
       // Show success toast
       toast({
-        title: "Transaction Updated",
-        description: `Successfully updated the transaction.`,
+        title: t("transactionModal.transactionDeleted"),
+        description: t("transactionModal.transactionDeletedDesc"),
         action: (
-          <ToastAction altText="Close">
+          <ToastAction altText={t("common.close")}>
             <Check className="h-4 w-4" />
           </ToastAction>
         ),
       })
     } catch (error) {
-      console.error("Error updating transaction:", error)
+      console.error("Error deleting transaction:", error)
+
+      // Restore the transaction on error
+      setTransactions((prev) => [...prev, transactionToDelete])
+
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update transaction. Please try again.",
+        title: t("common.error"),
+        description: t("transactionModal.deleteError"),
         variant: "destructive",
       })
     } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const deleteTransaction = async (id: number) => {
-    if (window.confirm("Are you sure you want to delete this transaction?")) {
-      try {
-        setIsLoading(true)
-        const transactionToDelete = transactions.find((t) => t.id === id)
-
-        if (!transactionToDelete) {
-          throw new Error("Transaction not found")
-        }
-
-        await deleteTransactionFromFirebase(transactionToDelete)
-
-        setTransactions((prev) => prev.filter((t) => t.id !== id))
-
-        // Show success toast
-        toast({
-          title: "Transaction Deleted",
-          description: "The transaction has been deleted successfully.",
-          action: (
-            <ToastAction altText="Close">
-              <Check className="h-4 w-4" />
-            </ToastAction>
-          ),
-        })
-      } catch (error) {
-        console.error("Error deleting transaction:", error)
-        toast({
-          title: "Error",
-          description: "Failed to delete transaction. Please try again.",
-          variant: "destructive",
-        })
-      } finally {
-        setIsLoading(false)
-      }
+      setBackgroundOperations((prev) => ({ ...prev, deleting: false }))
     }
   }
 
@@ -615,10 +711,10 @@ export default function Page() {
       setShowImportModal(false)
 
       toast({
-        title: "Import Successful",
-        description: `Successfully imported ${importedTransactions.length} transactions.`,
+        title: t("import.importSuccess"),
+        description: t("import.importSuccessDesc", { count: importedTransactions.length }),
         action: (
-          <ToastAction altText="Close">
+          <ToastAction altText={t("common.close")}>
             <Check className="h-4 w-4" />
           </ToastAction>
         ),
@@ -626,8 +722,8 @@ export default function Page() {
     } catch (error) {
       console.error("Error importing transactions:", error)
       toast({
-        title: "Error",
-        description: "Failed to import transactions. Please try again.",
+        title: t("common.error"),
+        description: t("import.importError"),
         variant: "destructive",
       })
     } finally {
@@ -664,6 +760,21 @@ export default function Page() {
     }
   }
 
+  // Custom button style class for consistent styling across the app
+  const primaryButtonClass =
+    "bg-gradient-to-r from-gray-900 to-black hover:from-black hover:to-gray-800 text-white shadow-lg dark:shadow-white/5 hover:shadow-black/25 dark:hover:shadow-white/10 transition-all duration-300"
+
+  // Improve the mobile sidebar toggle behavior
+  const toggleSidebar = () => {
+    setSideNavOpen(!sideNavOpen)
+    // If we're on mobile and opening the sidebar, add a class to prevent body scrolling
+    if (!sideNavOpen && window.innerWidth < 768) {
+      document.body.classList.add("overflow-hidden")
+    } else {
+      document.body.classList.remove("overflow-hidden")
+    }
+  }
+
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
@@ -674,18 +785,31 @@ export default function Page() {
             sideNavOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
           )}
         >
-          <div className="p-4 flex items-center space-x-2 border-b border-border/40">
-            <Wallet className="w-8 h-8 text-purple-600" />
-            <span className="text-xl font-bold">{t("appName")}</span>
+          <div className="p-4 flex items-center justify-between border-b border-border/40">
+            <div className="flex items-center space-x-2">
+              <Wallet className="w-8 h-8 text-gray-700 dark:text-gray-300" />
+              <span className="text-xl font-bold">{t("appName")}</span>
+            </div>
+            {/* Close button for mobile */}
+            <button
+              onClick={() => setSideNavOpen(false)}
+              className="md:hidden p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
-          <div className="mt-8 px-4">
+          <div className="mt-6 px-4">
+            {/* Core navigation items - visible on all devices */}
             <button
-              onClick={() => setCurrentView("dashboard")}
+              onClick={() => {
+                setCurrentView("dashboard")
+                if (window.innerWidth < 768) setSideNavOpen(false)
+              }}
               className={cn(
-                "w-full flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors",
+                "w-full flex items-center space-x-2 px-4 py-3 rounded-lg transition-colors",
                 currentView === "dashboard"
-                  ? "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300"
+                  ? "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   : "hover:bg-gray-100 dark:hover:bg-gray-700",
               )}
             >
@@ -694,11 +818,14 @@ export default function Page() {
             </button>
 
             <button
-              onClick={() => setCurrentView("tables")}
+              onClick={() => {
+                setCurrentView("tables")
+                if (window.innerWidth < 768) setSideNavOpen(false)
+              }}
               className={cn(
-                "w-full flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors mt-2",
+                "w-full flex items-center space-x-2 px-4 py-3 rounded-lg transition-colors mt-2",
                 currentView === "tables"
-                  ? "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300"
+                  ? "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   : "hover:bg-gray-100 dark:hover:bg-gray-700",
               )}
             >
@@ -707,11 +834,14 @@ export default function Page() {
             </button>
 
             <button
-              onClick={() => setCurrentView("agents")}
+              onClick={() => {
+                setCurrentView("agents")
+                if (window.innerWidth < 768) setSideNavOpen(false)
+              }}
               className={cn(
-                "w-full flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors mt-2",
+                "w-full flex items-center space-x-2 px-4 py-3 rounded-lg transition-colors mt-2",
                 currentView === "agents"
-                  ? "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300"
+                  ? "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   : "hover:bg-gray-100 dark:hover:bg-gray-700",
               )}
             >
@@ -719,30 +849,35 @@ export default function Page() {
               <span>{t("nav.agents")}</span>
             </button>
 
-            <button
-              onClick={() => setCurrentView("notes")}
-              className={cn(
-                "w-full flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors mt-2",
-                currentView === "notes"
-                  ? "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300"
-                  : "hover:bg-gray-100 dark:hover:bg-gray-700",
-              )}
-            >
-              <StickyNote className="w-5 h-5" />
-              <span>{t("nav.notes")}</span>
-            </button>
-            <a
-              href="https://sellerglobal.net/admin/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors mt-2 hover:bg-gray-100 dark:hover:bg-gray-700"
-            >
-              <Server className="w-5 h-5" />
-              <span>{t("nav.backend")}</span>
-            </a>
+            {/* Additional items - only visible on desktop */}
+            <div className="hidden md:block">
+              <button
+                onClick={() => setCurrentView("notes")}
+                className={cn(
+                  "w-full flex items-center space-x-2 px-4 py-3 rounded-lg transition-colors mt-2",
+                  currentView === "notes"
+                    ? "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    : "hover:bg-gray-100 dark:hover:bg-gray-700",
+                )}
+              >
+                <StickyNote className="w-5 h-5" />
+                <span>{t("nav.notes")}</span>
+              </button>
+
+              <a
+                href="https://sellerglobal.net/admin/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center space-x-2 px-4 py-3 rounded-lg transition-colors mt-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <Server className="w-5 h-5" />
+                <span>{t("nav.backend")}</span>
+              </a>
+            </div>
           </div>
 
-          <div className="absolute bottom-4 left-4 right-4 space-y-2">
+          {/* Bottom actions - only visible on desktop */}
+          <div className="absolute bottom-4 left-4 right-4 space-y-2 hidden md:block">
             <div className="flex space-x-2">
               <Button
                 variant="outline"
@@ -776,7 +911,7 @@ export default function Page() {
           <header className="flex justify-between items-center mb-6 bg-background p-4 rounded-lg shadow-sm border border-border/40">
             <div className="flex items-center">
               <button
-                onClick={() => setSideNavOpen(!sideNavOpen)}
+                onClick={toggleSidebar}
                 className="md:hidden mr-4 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 <Menu className="w-6 h-6" />
@@ -790,7 +925,39 @@ export default function Page() {
             </div>
 
             {/* Update the header section to include a manage agents button */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              {/* Mobile-only controls */}
+              <div className="md:hidden flex items-center space-x-2">
+                <button
+                  onClick={() => setDarkMode(!darkMode)}
+                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                </button>
+                <div className="relative group">
+                  <button className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <FileUp className="w-5 h-5" />
+                  </button>
+                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-border/40 hidden group-hover:block z-50">
+                    <div className="p-2">
+                      <button
+                        onClick={() => setShowImportModal(true)}
+                        className="w-full text-left px-4 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
+                      >
+                        <FileUp className="w-4 h-4 mr-2" />
+                        {t("nav.import")}
+                      </button>
+                      <button
+                        onClick={() => setShowExportModal(true)}
+                        className="w-full text-left px-4 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
+                      >
+                        <FileDown className="w-4 h-4 mr-2" />
+                        {t("nav.export")}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <LanguageSwitcher />
               <button className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
                 <RefreshCw className="w-5 h-5" />
@@ -799,6 +966,7 @@ export default function Page() {
             </div>
           </header>
 
+          {/* Show loading indicator only for initial load, not for background operations */}
           {isLoading && (
             <div className="fixed inset-0 bg-background/80 flex items-center justify-center z-50">
               <div className="flex flex-col items-center gap-2">
@@ -840,6 +1008,7 @@ export default function Page() {
               setTransactions={setTransactions}
               updateTransaction={updateTransaction}
               agentOptions={agentOptions}
+              primaryButtonClass={primaryButtonClass}
             />
           )}
 
@@ -852,6 +1021,7 @@ export default function Page() {
               formatTableDate={formatTableDate}
               agentOptions={agentOptions}
               onManageAgents={() => setShowAgentManager(true)}
+              primaryButtonClass={primaryButtonClass}
             />
           )}
 
@@ -867,6 +1037,7 @@ export default function Page() {
               addTransaction={addTransaction}
               updateTransaction={updateTransaction}
               agentOptions={agentOptions}
+              primaryButtonClass={primaryButtonClass}
             />
           )}
 
@@ -889,6 +1060,14 @@ export default function Page() {
           onAddAgent={addAgentToTeam}
           onDeleteAgent={deleteAgentFromTeam}
           onClose={() => setShowAgentManager(false)}
+          primaryButtonClass={primaryButtonClass}
+        />
+      )}
+      {sideNavOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-20 md:hidden"
+          onClick={() => setSideNavOpen(false)}
+          aria-hidden="true"
         />
       )}
     </ProtectedRoute>

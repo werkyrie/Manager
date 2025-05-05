@@ -91,7 +91,44 @@
     "editNote": "Edit Note",
     "all": "All Notes",
     "createNote": "Create Note",
-    "noNotes": "No Notes Found"
+    "noNotes": "No Notes Found",
+    "titlePlaceholder": "Title",
+    "contentPlaceholder": "Note content...",
+    "draftSaved": "Draft Saved",
+    "draftSavedDesc": "Your changes have been saved as a draft.",
+    "noteCreated": "Note Created",
+    "noteCreatedDesc": "Your note has been created successfully.",
+    "noteUpdated": "Note Updated",
+    "noteUpdatedDesc": "Your note has been updated successfully.",
+    "noteMoved": "Note Moved to Recycle Bin",
+    "noteMovedDesc": "The note has been moved to the recycle bin.",
+    "noteRestored": "Note Restored",
+    "noteRestoredDesc": "The note has been restored successfully.",
+    "noteDeleted": "Note Deleted",
+    "noteDeletedDesc": "The note has been permanently deleted.",
+    "binEmptied": "Recycle Bin Emptied",
+    "binEmptiedDesc": "All deleted notes have been permanently removed.",
+    "unsavedChanges": "Unsaved Changes",
+    "unsavedChangesDesc": "You have unsaved changes. Would you like to restore them?",
+    "discard": "Discard",
+    "filterByPinned": "Filter by Pinned",
+    "filterByLabels": "Filter by Labels",
+    "sortBy": "Sort By",
+    "selectFilter": "Select Filter",
+    "pinnedOnly": "Pinned Only",
+    "unpinnedOnly": "Unpinned Only",
+    "selectSortField": "Select Sort Field",
+    "lastUpdated": "Last Updated",
+    "dateCreated": "Date Created",
+    "title": "Title",
+    "selectSortDirection": "Select Sort Direction",
+    "ascending": "Ascending",
+    "descending": "Descending",
+    "resetFilters": "Reset Filters",
+    "saveError": "Failed to save note. Please try again.",
+    "deleteError": "Failed to delete note. Please try again.",
+    "restoreError": "Failed to restore note. Please try again.",
+    "emptyBinError": "Failed to empty recycle bin. Please try again."
   },
   "transactionModal": {
     "editTransaction": "Edit Transaction",
@@ -110,7 +147,24 @@
     "update": "Update",
     "add": "Add",
     "transaction": "Transaction",
-    "details": "Details"
+    "details": "Details",
+    "transactionAdded": "Transaction Added",
+    "transactionAddedDesc": "Successfully added a new {{type}} transaction.",
+    "transactionUpdated": "Transaction Updated",
+    "transactionUpdatedDesc": "Successfully updated the transaction.",
+    "transactionDeleted": "Transaction Deleted",
+    "transactionDeletedDesc": "The transaction has been deleted successfully.",
+    "addError": "Failed to add transaction. Please try again.",
+    "updateError": "Failed to update transaction. Please try again.",
+    "deleteError": "Failed to delete transaction. Please try again.",
+    "notFound": "Transaction not found",
+    "updateSuccess": "Update Successful",
+    "updateSuccessDesc": "Transaction has been updated successfully.",
+    "updatingTransaction": "Updating Transaction",
+    "updatingTransactionDesc": "Please wait while we update your transaction...",
+    "addingTransaction": "Adding Transaction",
+    "addingTransactionDesc": "Please wait while we add your transaction...",
+    "newTransactionAddedDesc": "New transaction has been successfully added."
   },
   "common": {
     "hotel": "Hotel",
@@ -122,7 +176,12 @@
     "transactions": "Transactions",
     "netBalance": "Net Balance",
     "loading": "Loading data...",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "edit": "Edit",
+    "error": "Error",
+    "loadError": "Failed to load data. Please try again.",
+    "unexpectedError": "An unexpected error occurred. Please try again.",
+    "close": "Close"
   },
   "months": {
     "january": "January",
@@ -164,7 +223,9 @@
     "typeChangeSuccess": "Successfully updated transaction types.",
     "teamChangeSuccess": "Successfully updated transaction teams.",
     "dateChangeSuccess": "Successfully updated transaction dates.",
-    "amountChangeSuccess": "Successfully updated transaction amounts."
+    "amountChangeSuccess": "Successfully updated transaction amounts.",
+    "updateError": "Failed to update transactions. Please try again.",
+    "deleteError": "Failed to delete some transactions. The data has been restored."
   },
   "receipt": {
     "receipt": "Receipt",
@@ -225,7 +286,10 @@
     "updateProfile": "Update Profile"
   },
   "validation": {
-    "allFieldsRequired": "All fields are required. Please fill in all fields."
+    "allFieldsRequired": "All fields are required. Please fill in all fields.",
+    "validationError": "Validation Error",
+    "requiredFields": "Please fill in all required fields: Team, Agent, Date, and Type.",
+    "amountGreaterThanZero": "Amount must be greater than zero."
   },
   "agentModal": {
     "addAgent": "Add Agent",
@@ -245,7 +309,14 @@
     "confirmDelete": "Confirm Delete Agent",
     "deleteWarning": "This action cannot be undone.",
     "confirmDeleteDesc": "Are you sure you want to delete {{name}} from the {{team}} team?",
-    "noAgents": "No agents found for this team."
+    "noAgents": "No agents found for this team.",
+    "cannotDelete": "Cannot Delete Agent",
+    "hasTransactions": "This agent has {{count}} transactions. Please reassign or delete these transactions first.",
+    "tips": {
+      "uniqueNames": "Agent names must be unique within a team",
+      "addTranslations": "After adding an agent, you can add translations in the translation tab",
+      "immediateAvailability": "New agents will immediately appear in transaction forms"
+    }
   },
   "export": {
     "exportTransactions": "Export Transactions to CSV",
@@ -265,7 +336,7 @@
     "shopId": "Shop ID",
     "notes": "Notes",
     "noTransactionsMatch": "No transactions match the selected filters",
-    "rowsSelected": "{{count}} rows selected for export",
+    "rowsSelected": "{{count}} items selected for export",
     "rowsWillBeExported": "{{count}} rows selected",
     "exportSummary": "Export Summary",
     "transactionsWillBeExported": "{{count}} transactions will be exported",
@@ -295,16 +366,9 @@
     "importErrors": "Import Errors",
     "row": "Row",
     "back": "Back",
-    "andMoreRows": "... and {{count}} more rows"
-  },
-  "nav": {
-    "dashboard": "Dashboard",
-    "transactions": "Transactions",
-    "agents": "Agents",
-    "notes": "Notes",
-    "backend": "BackEnd",
-    "import": "Import",
-    "export": "Export",
-    "toggleTheme": "Toggle Theme"
+    "andMoreRows": "... and {{count}} more rows",
+    "importSuccess": "Import Successful",
+    "importSuccessDesc": "Successfully imported {{count}} transactions.",
+    "importError": "Failed to import transactions. Please try again."
   }
 }

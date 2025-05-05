@@ -89,7 +89,7 @@ export function ManageAgents({ agentOptions, onAddAgent, onDeleteAgent, onClose 
             <TabsContent value="hotel" className="mt-4">
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Hotel Team Agents</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {agentOptions.Hotel.map((agent) => (
                     <div
                       key={agent}
@@ -115,7 +115,7 @@ export function ManageAgents({ agentOptions, onAddAgent, onDeleteAgent, onClose 
             <TabsContent value="hustle" className="mt-4">
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Hustle Team Agents</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {agentOptions.Hustle.map((agent) => (
                     <div
                       key={agent}
