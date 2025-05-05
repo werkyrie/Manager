@@ -1,8 +1,9 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { ArrowDown, ArrowUp, Activity, ChevronLeft, DollarSign, Users } from "lucide-react"
+import { ArrowDown, ArrowUp, Activity, ChevronLeft, DollarSign, Users, Wallet, BarChart3 } from "lucide-react"
 import { HotelLogo, HustleLogo } from "./team-logos"
 import { Button } from "@/components/ui/button"
 
@@ -41,6 +42,16 @@ const glowAnimation = `
 
   .glow-orange {
     animation: orangeGlow 3s infinite ease-in-out;
+  }
+
+  @keyframes scaleOnPress {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.95); }
+    100% { transform: scale(1); }
+  }
+
+  .scale-on-press:active {
+    animation: scaleOnPress 0.2s ease-in-out;
   }
 `
 
@@ -92,6 +103,7 @@ export function AgentsView({
 }) {
   // Add the translation hook
   const { t, i18n } = useTranslation()
+  const [isMobile, setIsMobile] = useState(false)
 
   // Function to translate agent names - FIXED VERSION
   const translateAgentName = (name: string) => {
@@ -102,6 +114,54 @@ export function AgentsView({
     // If translation exists, use it; otherwise, use the original name
     return hasTranslation ? t(translationKey) : name
   }
+
+  // Check if we're on mobile
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+
+    checkIfMobile()
+    window.addEventListener("resize", checkIfMobile)
+
+    return () => {
+      window.removeEventListener("resize", checkIfMobile)
+    }
+  }, [])
+
+  // Function to get agent icon color based on team
+  const getAgentIconColor = (team: string, isTopPerformer: boolean) => {
+    if (team === "Hotel") {
+      return isTopPerformer
+        ? "bg-gradient-to-br from-blue-400 to-blue-600 dark:from-blue-500 dark:to-blue-700"
+        : "bg-gradient-to-br from-blue-300 to-blue-500 dark:from-blue-600 dark:to-blue-800"
+    } else {
+      return isTopPerformer
+        ? "bg-gradient-to-br from-orange-400 to-orange-600 dark:from-orange-500 dark:to-orange-700"
+        : "bg-gradient-to-br from-orange-300 to-orange-500 dark:from-orange-600 dark:to-orange-800"
+    }
+  }
+
+  // Prepare agent data for both teams
+  const prepareAgentData = () => {
+    const hotelAgents = (agentOptions?.Hotel || [])
+      .map((agent) => {
+        const stats = getAgentStats(agent)
+        return { agent, stats: stats.stats, team: stats.team }
+      })
+      .sort((a, b) => b.stats.netBalance - a.stats.netBalance)
+
+    const hustleAgents = (agentOptions?.Hustle || [])
+      .map((agent) => {
+        const stats = getAgentStats(agent)
+        return { agent, stats: stats.stats, team: stats.team }
+      })
+      .sort((a, b) => b.stats.netBalance - a.stats.netBalance)
+
+    return { hotelAgents, hustleAgents }
+  }
+
+  const { hotelAgents, hustleAgents } = prepareAgentData()
 
   return (
     <div className="space-y-6">
@@ -290,26 +350,170 @@ export function AgentsView({
                 "bg-gradient-to-r from-gray-900 to-black hover:from-black hover:to-gray-800 text-white shadow-lg dark:shadow-white/5 hover:shadow-black/25 dark:hover:shadow-white/10 transition-all duration-300"
               }
             >
-              <Users className="w-4 h-4" />
+              <Users className="w-4 h-4 mr-2" />
               {t("agentModal.manageAgents")}
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Hotel Team */}
-            <Card className="border-border/40 shadow-md">
-              <CardHeader className="pb-0">
-                <CardTitle className="text-lg font-medium">{t("dashboard.hotelTeam")}</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {(agentOptions?.Hotel || [])
-                    .map((agent) => {
-                      const stats = getAgentStats(agent)
-                      return { agent, stats: stats.stats, team: stats.team }
-                    })
-                    .sort((a, b) => b.stats.netBalance - a.stats.netBalance)
-                    .map((item, index) => {
+          {isMobile ? (
+            // Mobile App Icon View
+            <div className="space-y-6">
+              {/* Hotel Team */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3 px-1">{t("dashboard.hotelTeam")}</h3>
+                <div className="grid grid-cols-3 gap-3">
+                  {hotelAgents.map((item, index) => {
+                    const isTopPerformer = index === 0
+                    return (
+                      <button
+                        key={item.agent}
+                        onClick={() => setSelectedAgent(item.agent)}
+                        className="scale-on-press focus:outline-none"
+                      >
+                        <div className="flex flex-col items-center">
+                          <div
+                            className={cn(
+                              "w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg relative",
+                              getAgentIconColor("Hotel", isTopPerformer),
+                              isTopPerformer ? "glow-blue" : "",
+                            )}
+                          >
+                            <div className="absolute inset-0 bg-white/10 rounded-2xl"></div>
+                            <div className="relative">
+                              <HotelLogo className="w-10 h-10 text-white" />
+                              {isTopPerformer && (
+                                <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white">
+                                  1
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <span className="mt-2 text-sm font-medium truncate w-20 text-center">
+                            {translateAgentName(item.agent)}
+                          </span>
+                          <span
+                            className={cn(
+                              "text-xs",
+                              item.stats.netBalance > 0
+                                ? "text-green-600 dark:text-green-400"
+                                : "text-red-600 dark:text-red-400",
+                            )}
+                          >
+                            ${item.stats.netBalance.toLocaleString()}
+                          </span>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Hustle Team */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3 px-1">{t("dashboard.hustleTeam")}</h3>
+                <div className="grid grid-cols-3 gap-3">
+                  {hustleAgents.map((item, index) => {
+                    const isTopPerformer = index === 0
+                    return (
+                      <button
+                        key={item.agent}
+                        onClick={() => setSelectedAgent(item.agent)}
+                        className="scale-on-press focus:outline-none"
+                      >
+                        <div className="flex flex-col items-center">
+                          <div
+                            className={cn(
+                              "w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg relative",
+                              getAgentIconColor("Hustle", isTopPerformer),
+                              isTopPerformer ? "glow-orange" : "",
+                            )}
+                          >
+                            <div className="absolute inset-0 bg-white/10 rounded-2xl"></div>
+                            <div className="relative">
+                              <HustleLogo className="w-10 h-10 text-white" />
+                              {isTopPerformer && (
+                                <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white">
+                                  1
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <span className="mt-2 text-sm font-medium truncate w-20 text-center">
+                            {translateAgentName(item.agent)}
+                          </span>
+                          <span
+                            className={cn(
+                              "text-xs",
+                              item.stats.netBalance > 0
+                                ? "text-green-600 dark:text-green-400"
+                                : "text-red-600 dark:text-red-400",
+                            )}
+                          >
+                            ${item.stats.netBalance.toLocaleString()}
+                          </span>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Quick Stats Icons */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3 px-1">{t("agents.quickStats")}</h3>
+                <div className="grid grid-cols-3 gap-3">
+                  {/* Top Performer */}
+                  <div className="flex flex-col items-center">
+                    <div className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg bg-gradient-to-br from-purple-400 to-purple-600 dark:from-purple-500 dark:to-purple-700 relative">
+                      <div className="absolute inset-0 bg-white/10 rounded-2xl"></div>
+                      <BarChart3 className="w-10 h-10 text-white" />
+                    </div>
+                    <span className="mt-2 text-sm font-medium text-center">{t("agents.topPerformer")}</span>
+                    <span className="text-xs text-purple-600 dark:text-purple-400">
+                      {hotelAgents.length > 0 ? translateAgentName(hotelAgents[0].agent) : "-"}
+                    </span>
+                  </div>
+
+                  {/* Total Agents */}
+                  <div className="flex flex-col items-center">
+                    <div className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg bg-gradient-to-br from-green-400 to-green-600 dark:from-green-500 dark:to-green-700 relative">
+                      <div className="absolute inset-0 bg-white/10 rounded-2xl"></div>
+                      <Users className="w-10 h-10 text-white" />
+                    </div>
+                    <span className="mt-2 text-sm font-medium text-center">{t("agents.totalAgents")}</span>
+                    <span className="text-xs text-green-600 dark:text-green-400">
+                      {hotelAgents.length + hustleAgents.length}
+                    </span>
+                  </div>
+
+                  {/* Total Balance */}
+                  <div className="flex flex-col items-center">
+                    <div className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg bg-gradient-to-br from-blue-400 to-blue-600 dark:from-blue-500 dark:to-blue-700 relative">
+                      <div className="absolute inset-0 bg-white/10 rounded-2xl"></div>
+                      <Wallet className="w-10 h-10 text-white" />
+                    </div>
+                    <span className="mt-2 text-sm font-medium text-center">{t("agents.totalBalance")}</span>
+                    <span className="text-xs text-blue-600 dark:text-blue-400">
+                      $
+                      {[...hotelAgents, ...hustleAgents]
+                        .reduce((sum, agent) => sum + agent.stats.netBalance, 0)
+                        .toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            // Desktop Card View
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Hotel Team */}
+              <Card className="border-border/40 shadow-md">
+                <CardHeader className="pb-0">
+                  <CardTitle className="text-lg font-medium">{t("dashboard.hotelTeam")}</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {hotelAgents.map((item, index) => {
                       const isTopPerformer = index === 0
                       return (
                         <button
@@ -353,24 +557,18 @@ export function AgentsView({
                         </button>
                       )
                     })}
-                </div>
-              </CardContent>
-            </Card>
+                  </div>
+                </CardContent>
+              </Card>
 
-            {/* Hustle Team */}
-            <Card className="border-border/40 shadow-md">
-              <CardHeader className="pb-0">
-                <CardTitle className="text-lg font-medium">{t("dashboard.hustleTeam")}</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {(agentOptions?.Hustle || [])
-                    .map((agent) => {
-                      const stats = getAgentStats(agent)
-                      return { agent, stats: stats.stats, team: stats.team }
-                    })
-                    .sort((a, b) => b.stats.netBalance - a.stats.netBalance)
-                    .map((item, index) => {
+              {/* Hustle Team */}
+              <Card className="border-border/40 shadow-md">
+                <CardHeader className="pb-0">
+                  <CardTitle className="text-lg font-medium">{t("dashboard.hustleTeam")}</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {hustleAgents.map((item, index) => {
                       const isTopPerformer = index === 0
                       return (
                         <button
@@ -414,10 +612,11 @@ export function AgentsView({
                         </button>
                       )
                     })}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
       )}
     </div>

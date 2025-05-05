@@ -82,30 +82,8 @@ export function TransactionsView({
   formatTableDate,
   setTransactions,
   updateTransaction,
-  agentOptions,
-  primaryButtonClass,
-}: {
-  transactions: Transaction[]
-  searchQuery: string
-  setSearchQuery: (query: string) => void
-  selectedTeam: string
-  setSelectedTeam: (team: string) => void
-  selectedType: string
-  setSelectedType: (type: string) => void
-  selectedAgent: string | null
-  setSelectedAgent: (agent: string | null) => void
-  sortField: SortField
-  sortDirection: SortDirection
-  handleSort: (field: SortField) => void
-  getFilteredAndSortedTransactions: () => Transaction[]
-  setEditingTransaction: (transaction: Transaction | null) => void
-  setShowTransactionModal: (show: boolean) => void
-  deleteTransaction: (id: number) => void
-  formatTableDate: (date: string) => string
-  setTransactions: (transactions: Transaction[]) => void
-  updateTransaction: (transaction: Transaction) => Promise<Transaction>
-  agentOptions: Record<string, string[]>
-  primaryButtonClass?: string
+  agentOptions,\
+  primaryButtonClass?: string,
 }) {
   // Add the translation hook
   const { t, i18n } = useTranslation()
@@ -482,7 +460,7 @@ export function TransactionsView({
 
   // Add a loading indicator at the top of the return statement
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-x-hidden">
       {isLoading && (
         <div className="fixed inset-0 bg-background/80 flex items-center justify-center z-50">
           <div className="flex flex-col items-center gap-2">
@@ -658,7 +636,7 @@ export function TransactionsView({
           </div>
         )}
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto -mx-4 sm:mx-0">
           <table className="w-full hidden md:table">
             <thead className="bg-muted/50">
               <tr>
@@ -945,7 +923,7 @@ export function TransactionsView({
           </table>
 
           {/* Add mobile card view for small screens */}
-          <div className="grid grid-cols-1 gap-4 md:hidden">
+          <div className="grid grid-cols-1 gap-4 md:hidden px-4 overflow-visible">
             {getPaginatedTransactions().map((transaction) =>
               editingInlineId === transaction.id ? (
                 // Mobile editing view

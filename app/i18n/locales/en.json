@@ -70,7 +70,12 @@
     "Joie": "Joie",
     "Elocin": "Elocin",
     "Aubrey": "Aubrey",
-    "Xela": "Xela"
+    "Xela": "Xela",
+    "quickStats": "Quick Stats",
+    "topPerformer": "Top Performer",
+    "totalBalance": "Total Balance",
+    "agentCount": "Agent Count",
+    "totalAgents": "Total Agents"
   },
   "notes": {
     "recycleBin": "Recycle Bin",
@@ -283,7 +288,8 @@
     "enterName": "Enter your name",
     "signOut": "Sign Out",
     "updating": "Updating...",
-    "updateProfile": "Update Profile"
+    "updateProfile": "Update Profile",
+    "rememberMe": "Remember me"
   },
   "validation": {
     "allFieldsRequired": "All fields are required. Please fill in all fields.",
@@ -378,6 +384,7 @@
     "previous": "Previous page",
     "next": "Next page",
     "page": "Page {{page}} of {{total}}",
-    "goToPage": "Go to page {{page}}"
+    "goToPage": "Go to page {{page}}",
+    "pageOf": "Page {{current}} of {{total}}"
   }
 }

@@ -10,6 +10,9 @@ import {
   onAuthStateChanged,
   sendPasswordResetEmail,
   updateProfile,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence,
 } from "firebase/auth"
 import { auth } from "../lib/firebase"
 import { useToast } from "@/components/ui/use-toast"
@@ -18,7 +21,7 @@ import { useRouter } from "next/navigation"
 type AuthContextType = {
   user: User | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<void>
+  signIn: (email: string, password: string, rememberMe: boolean) => Promise<void>
   signUp: (email: string, password: string, displayName: string) => Promise<void>
   logout: () => Promise<void>
   resetPassword: (email: string) => Promise<void>
@@ -27,24 +30,92 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+// Inactivity timeout in milliseconds (1 hour)
+const INACTIVITY_TIMEOUT = 60 * 60 * 1000
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
   const router = useRouter()
+  const [inactivityTimer, setInactivityTimer] = useState<NodeJS.Timeout | null>(null)
+
+  // Function to reset the inactivity timer
+  const resetInactivityTimer = () => {
+    if (inactivityTimer) {
+      clearTimeout(inactivityTimer)
+    }
+
+    // Only set a new timer if the user is logged in
+    if (user) {
+      const timer = setTimeout(() => {
+        // Auto logout after inactivity
+        if (user) {
+          toast({
+            title: "Session expired",
+            description: "You have been logged out due to inactivity.",
+          })
+          logout()
+        }
+      }, INACTIVITY_TIMEOUT)
+
+      setInactivityTimer(timer)
+    }
+  }
+
+  // Set up activity listeners
+  useEffect(() => {
+    if (!user) return
+
+    // Events to track for user activity
+    const activityEvents = ["mousedown", "mousemove", "keypress", "scroll", "touchstart", "click"]
+
+    // Event handler for any user activity
+    const handleUserActivity = () => {
+      resetInactivityTimer()
+    }
+
+    // Add event listeners
+    activityEvents.forEach((event) => {
+      window.addEventListener(event, handleUserActivity)
+    })
+
+    // Initial timer setup
+    resetInactivityTimer()
+
+    // Cleanup
+    return () => {
+      if (inactivityTimer) {
+        clearTimeout(inactivityTimer)
+      }
+
+      activityEvents.forEach((event) => {
+        window.removeEventListener(event, handleUserActivity)
+      })
+    }
+  }, [user]) // Reset when user changes
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user)
       setLoading(false)
+
+      // Reset inactivity timer when auth state changes
+      if (user) {
+        resetInactivityTimer()
+      }
     })
 
     return () => unsubscribe()
   }, [])
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string, rememberMe: boolean) => {
     try {
       setLoading(true)
+
+      // Set persistence based on remember me option
+      await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence)
+
       await signInWithEmailAndPassword(auth, email, password)
       toast({
         title: "Welcome back!",
@@ -92,6 +163,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
+      // Clear the inactivity timer
+      if (inactivityTimer) {
+        clearTimeout(inactivityTimer)
+        setInactivityTimer(null)
+      }
+
       await signOut(auth)
       toast({
         title: "Signed out",

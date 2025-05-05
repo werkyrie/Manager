@@ -8,7 +8,6 @@ import {
   UserRound,
   Moon,
   Sun,
-  Menu,
   RefreshCw,
   Check,
   FileUp,
@@ -907,15 +906,9 @@ export default function Page() {
         </nav>
 
         {/* Main Content */}
-        <div className="md:ml-64 p-4">
+        <div className="md:ml-64 p-4 pb-20 md:pb-4">
           <header className="flex justify-between items-center mb-6 bg-background p-4 rounded-lg shadow-sm border border-border/40">
             <div className="flex items-center">
-              <button
-                onClick={toggleSidebar}
-                className="md:hidden mr-4 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-              >
-                <Menu className="w-6 h-6" />
-              </button>
               <h1 className="text-2xl font-bold">
                 {currentView === "dashboard" && t("nav.dashboard")}
                 {currentView === "tables" && t("nav.transactions")}
@@ -924,7 +917,6 @@ export default function Page() {
               </h1>
             </div>
 
-            {/* Update the header section to include a manage agents button */}
             <div className="flex items-center space-x-2 sm:space-x-4">
               {/* Mobile-only controls */}
               <div className="md:hidden flex items-center space-x-2">
@@ -1063,13 +1055,44 @@ export default function Page() {
           primaryButtonClass={primaryButtonClass}
         />
       )}
-      {sideNavOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-20 md:hidden"
-          onClick={() => setSideNavOpen(false)}
-          aria-hidden="true"
-        />
-      )}
+      {/* Mobile Bottom Navigation */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border/40 z-30">
+        <div className="flex justify-around items-center h-16">
+          <button
+            onClick={() => setCurrentView("dashboard")}
+            className={cn(
+              "flex flex-col items-center justify-center w-full h-full",
+              currentView === "dashboard" ? "text-primary" : "text-muted-foreground",
+            )}
+          >
+            <BarChart3 className="w-5 h-5" />
+            <span className="text-xs mt-1">{t("nav.dashboard")}</span>
+          </button>
+          <button
+            onClick={() => setCurrentView("tables")}
+            className={cn(
+              "flex flex-col items-center justify-center w-full h-full",
+              currentView === "tables" ? "text-primary" : "text-muted-foreground",
+            )}
+          >
+            <Table2 className="w-5 h-5" />
+            <span className="text-xs mt-1">{t("nav.transactions")}</span>
+          </button>
+          <button
+            onClick={() => setCurrentView("agents")}
+            className={cn(
+              "flex flex-col items-center justify-center w-full h-full",
+              currentView === "agents" ? "text-primary" : "text-muted-foreground",
+            )}
+          >
+            <UserRound className="w-5 h-5" />
+            <span className="text-xs mt-1">{t("nav.agents")}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Add padding at the bottom for mobile to account for the navbar */}
+      <div className="md:hidden h-16"></div>
     </ProtectedRoute>
   )
 }

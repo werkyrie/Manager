@@ -70,7 +70,12 @@
     "Joie": "乔伊",
     "Elocin": "艾洛辛",
     "Aubrey": "奥布里",
-    "Xela": "泽拉"
+    "Xela": "泽拉",
+    "quickStats": "快速统计",
+    "topPerformer": "最佳表现者",
+    "totalBalance": "总余额",
+    "agentCount": "代理数量",
+    "totalAgents": "代理总数"
   },
   "notes": {
     "recycleBin": "回收站",
@@ -283,7 +288,8 @@
     "enterName": "输入您的姓名",
     "signOut": "退出登录",
     "updating": "更新中...",
-    "updateProfile": "更新资料"
+    "updateProfile": "更新资料",
+    "rememberMe": "记住我"
   },
   "validation": {
     "allFieldsRequired": "所有字段均为必填字段。请填写所有字段。",
@@ -378,6 +384,7 @@
     "previous": "上一页",
     "next": "下一页",
     "page": "第 {{page}} 页，共 {{total}} 页",
-    "goToPage": "前往第 {{page}} 页"
+    "goToPage": "前往第 {{page}} 页",
+    "pageOf": "第 {{current}} 页，共 {{total}} 页"
   }
 }
