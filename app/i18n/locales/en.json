@@ -5,6 +5,7 @@
     "transactions": "Transactions",
     "agents": "Agents",
     "notes": "Notes",
+    "backend": "Backend",
     "import": "Import",
     "export": "Export",
     "toggleTheme": "Toggle Theme"
@@ -87,7 +88,10 @@
     "allNotes": "All Notes",
     "pinned": "Pinned",
     "createNewNote": "Create New Note",
-    "editNote": "Edit Note"
+    "editNote": "Edit Note",
+    "all": "All Notes",
+    "createNote": "Create Note",
+    "noNotes": "No Notes Found"
   },
   "transactionModal": {
     "editTransaction": "Edit Transaction",
@@ -117,7 +121,8 @@
     "team": "Team",
     "transactions": "Transactions",
     "netBalance": "Net Balance",
-    "loading": "Loading data..."
+    "loading": "Loading data...",
+    "saving": "Saving..."
   },
   "months": {
     "january": "January",
@@ -175,8 +180,16 @@
     "viewReceipt": "View Receipt",
     "close": "Close",
     "uploadInstructions": "You can drag and drop an image, paste from clipboard (Ctrl+V), or click to browse files.",
-    "onlyImagesAllowed": "Only image files are allowed",
-    "fileTooLarge": "File is too large. Maximum size is 5MB"
+    "onlyImagesAllowed": "Only image files are allowed (JPG, PNG, GIF)",
+    "fileTooLarge": "File is too large. Maximum size is 2MB",
+    "processing": "Processing image...",
+    "imageProcessingError": "Error processing image. Try a different image or format.",
+    "fileReadError": "Error reading file. Please try again.",
+    "uploadSuccess": "Receipt uploaded successfully",
+    "uploadFailed": "Receipt upload failed. Please try again.",
+    "fileSizeLimit": "Maximum file size",
+    "supportedFormats": "Supported formats",
+    "processingTimeout": "Image processing timed out. Try a smaller image or different format."
   },
   "firebase": {
     "error": "An error occurred while connecting to the database",
@@ -210,5 +223,88 @@
     "signOut": "Sign Out",
     "updating": "Updating...",
     "updateProfile": "Update Profile"
+  },
+  "validation": {
+    "allFieldsRequired": "All fields are required. Please fill in all fields."
+  },
+  "agentModal": {
+    "addAgent": "Add Agent",
+    "agentName": "Agent Name",
+    "enterAgentName": "Enter Agent Name",
+    "addNewAgent": "Add New Agent",
+    "manageAgents": "Manage Agents",
+    "newAgentName": "New Agent Name",
+    "agentAdded": "Agent Added",
+    "agentAddedDesc": "{{name}} has been added to the {{team}} team.",
+    "agentExists": "Agent Already Exists",
+    "agentExistsDesc": "{{name}} already exists in the {{team}} team.",
+    "addError": "Failed to add agent. Please try again.",
+    "agentDeleted": "Agent Deleted",
+    "agentDeletedDesc": "{{name}} has been removed from the {{team}} team.",
+    "deleteError": "Failed to delete agent. Please try again.",
+    "confirmDelete": "Confirm Delete Agent",
+    "deleteWarning": "This action cannot be undone.",
+    "confirmDeleteDesc": "Are you sure you want to delete {{name}} from the {{team}} team?",
+    "noAgents": "No agents found for this team."
+  },
+  "export": {
+    "exportTransactions": "Export Transactions to CSV",
+    "previewExport": "Preview Export Data",
+    "filterByTeam": "Filter by Team",
+    "filterByAgent": "Filter by Agent",
+    "filterByType": "Filter by Type",
+    "allTeams": "All Teams",
+    "allAgents": "All Agents",
+    "allTypes": "All Types",
+    "select": "Select",
+    "team": "Team",
+    "agent": "Agent",
+    "date": "Date",
+    "amount": "Amount",
+    "type": "Type",
+    "shopId": "Shop ID",
+    "notes": "Notes",
+    "noTransactionsMatch": "No transactions match the selected filters",
+    "rowsSelected": "{{count}} rows selected for export",
+    "rowsWillBeExported": "{{count}} rows selected",
+    "exportSummary": "Export Summary",
+    "transactionsWillBeExported": "{{count}} transactions will be exported",
+    "rowsManuallySelected": "{{count}} rows manually selected",
+    "andMoreTransactions": "... and {{count}} more transactions",
+    "back": "Back",
+    "downloadCSV": "Download CSV",
+    "cancel": "Cancel",
+    "preview": "Preview Export",
+    "exportLanguage": "Export Language",
+    "selectExportLanguage": "Select export language",
+    "exportInEnglish": "Export in English",
+    "exportInChinese": "Export in Chinese",
+    "currentUiLanguage": "Current UI language"
+  },
+  "import": {
+    "importTransactions": "Import Transactions from CSV",
+    "uploadCSV": "Upload CSV File",
+    "csvRequirements": "The CSV must include: Team, Agent, Date, Amount, Type columns",
+    "chooseFile": "Choose File",
+    "noFileChosen": "No File Chosen",
+    "previewImport": "Preview Import",
+    "confirmImport": "Confirm Import",
+    "readyToImport": "Ready to Import",
+    "transactionsWillBeImported": "{{count}} transactions will be imported",
+    "csvDataPreview": "CSV Data Preview",
+    "importErrors": "Import Errors",
+    "row": "Row",
+    "back": "Back",
+    "andMoreRows": "... and {{count}} more rows"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "transactions": "Transactions",
+    "agents": "Agents",
+    "notes": "Notes",
+    "backend": "BackEnd",
+    "import": "Import",
+    "export": "Export",
+    "toggleTheme": "Toggle Theme"
   }
 }

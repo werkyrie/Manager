@@ -5,6 +5,7 @@
     "transactions": "交易",
     "agents": "代理",
     "notes": "笔记",
+    "backend": "后台管理",
     "import": "导入",
     "export": "导出",
     "toggleTheme": "切换主题"
@@ -87,7 +88,10 @@
     "allNotes": "所有笔记",
     "pinned": "已固定",
     "createNewNote": "创建新笔记",
-    "editNote": "编辑笔记"
+    "editNote": "编辑笔记",
+    "all": "所有说明",
+    "createNote": "创建注释",
+    "noNotes": "未找到笔记"
   },
   "transactionModal": {
     "editTransaction": "编辑交易",
@@ -117,7 +121,8 @@
     "team": "团队",
     "transactions": "交易",
     "netBalance": "净余额",
-    "loading": "加载数据中..."
+    "loading": "加载数据中...",
+    "saving": "保存中..."
   },
   "months": {
     "january": "一月",
@@ -175,8 +180,16 @@
     "viewReceipt": "查看收据",
     "close": "关闭",
     "uploadInstructions": "您可以拖放图片、从剪贴板粘贴(Ctrl+V)或点击浏览文件。",
-    "onlyImagesAllowed": "只允许图片文件",
-    "fileTooLarge": "文件太大。最大大小为5MB"
+    "onlyImagesAllowed": "只允许图片文件 (JPG, PNG, GIF)",
+    "fileTooLarge": "文件太大。最大大小为2MB",
+    "processing": "处理图片中...",
+    "imageProcessingError": "处理图片时出错。尝试不同的图片或格式。",
+    "fileReadError": "读取文件时出错。请重试。",
+    "uploadSuccess": "收据上传成功",
+    "uploadFailed": "收据上传失败。请重试。",
+    "fileSizeLimit": "最大文件大小",
+    "supportedFormats": "支持的格式",
+    "processingTimeout": "图像处理超时。尝试使用较小的图像或不同的格式。"
   },
   "firebase": {
     "error": "连接数据库时发生错误",
@@ -210,5 +223,83 @@
     "signOut": "退出登录",
     "updating": "更新中...",
     "updateProfile": "更新资料"
+  },
+  "validation": {
+    "allFieldsRequired": "所有字段均为必填字段。请填写所有字段。"
+  },
+  "agentModal": {
+    "addAgent": "添加代理",
+    "agentName": "代理名称",
+    "enterAgentName": "输入代理名称",
+    "addNewAgent": "添加新代理",
+    "manageAgents": "管理代理",
+    "newAgentName": "新代理名称",
+    "agentAdded": "代理已添加",
+    "agentAddedDesc": "{{name}} 已添加到 {{team}} 团队。",
+    "agentExists": "代理已存在",
+    "agentExistsDesc": "{{name}} 已存在于 {{team}} 团队中。",
+    "addError": "添加代理失败。请重试。",
+    "agentDeleted": "代理已删除",
+    "agentDeletedDesc": "{{name}} 已从 {{team}} 团队中移除。",
+    "deleteError": "删除代理失败。请重试。",
+    "confirmDelete": "确认删除代理",
+    "deleteWarning": "此操作无法撤消。",
+    "confirmDeleteDesc": "您确定要从 {{team}} 团队中删除 {{name}} 吗？",
+    "noAgents": "此团队没有找到代理。",
+    "tips": {
+      "uniqueNames": "代理名称在团队内必须唯一",
+      "addTranslations": "添加代理后，您可以在翻译标签页中添加翻译",
+      "immediateAvailability": "新代理将立即出现在交易表单中"
+    }
+  },
+  "export": {
+    "exportTransactions": "导出交易",
+    "previewExport": "预览导出数据",
+    "filterByTeam": "按团队筛选",
+    "filterByAgent": "按代理筛选",
+    "filterByType": "按类型筛选",
+    "allTeams": "所有团队",
+    "allAgents": "所有代理",
+    "allTypes": "所有类型",
+    "select": "选择",
+    "team": "团队",
+    "agent": "代理",
+    "date": "日期",
+    "amount": "金额",
+    "type": "类型",
+    "shopId": "商店ID",
+    "notes": "备注",
+    "noTransactionsMatch": "没有交易符合所选筛选条件",
+    "rowsSelected": "已选择 {{count}} 行导出",
+    "rowsWillBeExported": "已选择 {{count}} 行",
+    "exportSummary": "导出摘要",
+    "transactionsWillBeExported": "{{count}} 个交易将被导出",
+    "rowsManuallySelected": "{{count}} 行手动选择",
+    "andMoreTransactions": "... 以及 {{count}} 个更多交易",
+    "back": "返回",
+    "downloadCSV": "下载 CSV",
+    "cancel": "取消",
+    "preview": "预览导出",
+    "exportLanguage": "导出语言",
+    "selectExportLanguage": "选择导出语言",
+    "exportInEnglish": "使用英文导出",
+    "exportInChinese": "使用中文导出",
+    "currentUiLanguage": "当前界面语言"
+  },
+  "import": {
+    "importTransactions": "从CSV导入交易",
+    "uploadCSV": "上传CSV文件",
+    "csvRequirements": "CSV必须包含：团队、代理、日期、金额、类型列",
+    "chooseFile": "选择文件",
+    "noFileChosen": "未选择文件",
+    "previewImport": "预览导入",
+    "confirmImport": "确认导入",
+    "readyToImport": "准备导入",
+    "transactionsWillBeImported": "{{count}} 个交易将被导入",
+    "csvDataPreview": "CSV数据预览",
+    "importErrors": "导入错误",
+    "row": "行",
+    "back": "返回",
+    "andMoreRows": "... 以及 {{count}} 个更多行"
   }
 }

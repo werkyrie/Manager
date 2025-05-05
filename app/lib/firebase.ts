@@ -8,15 +8,25 @@ const firebaseConfig = {
   apiKey: "AIzaSyAgNSSoQtjvsOsS1K4ERdmX7v3oMUBB9wo",
   authDomain: "adminmenu-97d4f.firebaseapp.com",
   projectId: "adminmenu-97d4f",
-  storageBucket: "adminmenu-97d4f.appspot.com", // Fixed the storage bucket URL
+  storageBucket: "adminmenu-97d4f.appspot.com",
   messagingSenderId: "581993604609",
   appId: "1:581993604609:web:3b7f5096e4ad723ae28200",
 }
 
-// Initialize Firebase
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]
-const db = getFirestore(app)
-const storage = getStorage(app)
-const auth = getAuth(app)
+// Initialize Firebase with SSR safety checks
+let app, db, storage, auth
+
+// Check if we're in the browser environment
+if (typeof window !== "undefined") {
+  if (!getApps().length) {
+    app = initializeApp(firebaseConfig)
+  } else {
+    app = getApps()[0]
+  }
+
+  db = getFirestore(app)
+  storage = getStorage(app)
+  auth = getAuth(app)
+}
 
 export { app, db, storage, auth }

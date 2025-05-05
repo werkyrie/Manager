@@ -13,8 +13,9 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     setMounted(true)
   }, [])
 
+  // Only render children when mounted to avoid hydration issues
   if (!mounted) {
-    return <>{children}</>
+    return null
   }
 
   return <I18nextProvider i18n={i18n}>{children}</I18nextProvider>

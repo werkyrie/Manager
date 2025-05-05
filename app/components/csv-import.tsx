@@ -11,6 +11,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, FileUp, Check, X } from "lucide-react"
 import { TeamBadge } from "./team-logos"
 import { cn } from "@/lib/utils"
+import { useTranslation } from "react-i18next"
 
 // Types
 type Transaction = {
@@ -53,6 +54,7 @@ export function CSVImport({
   const [errors, setErrors] = useState<ImportError[]>([])
   const [isPreview, setIsPreview] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { t } = useTranslation()
 
   // Parse CSV file
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -220,7 +222,7 @@ export function CSVImport({
         <CardHeader>
           <CardTitle className="text-xl font-semibold flex items-center">
             <FileUp className="mr-2 h-5 w-5" />
-            {isPreview ? "Preview Import Data" : "Import Transactions from CSV"}
+            {isPreview ? t("import.readyToImport") : t("import.importTransactions")}
           </CardTitle>
         </CardHeader>
 
@@ -229,11 +231,9 @@ export function CSVImport({
             <div className="space-y-4">
               <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
                 <Label htmlFor="csv-file" className="text-lg font-medium block mb-2">
-                  Upload CSV File
+                  {t("import.uploadCSV")}
                 </Label>
-                <p className="text-muted-foreground mb-4">
-                  The CSV must include: Team, Agent, Date, Amount, Type columns
-                </p>
+                <p className="text-muted-foreground mb-4">{t("import.csvRequirements")}</p>
                 <Input
                   id="csv-file"
                   type="file"
@@ -247,12 +247,12 @@ export function CSVImport({
               {errors.length > 0 && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Import Errors</AlertTitle>
+                  <AlertTitle>{t("import.importErrors")}</AlertTitle>
                   <AlertDescription>
                     <ul className="list-disc pl-5 mt-2 space-y-1">
                       {errors.map((error, index) => (
                         <li key={index}>
-                          Row {error.row}: {error.message}
+                          {t("import.row")} {error.row}: {error.message}
                         </li>
                       ))}
                     </ul>
@@ -262,7 +262,7 @@ export function CSVImport({
 
               {csvData.length > 0 && (
                 <div className="mt-4">
-                  <h3 className="text-lg font-medium mb-2">CSV Data Preview</h3>
+                  <h3 className="text-lg font-medium mb-2">{t("import.csvDataPreview")}</h3>
                   <div className="border rounded-md overflow-x-auto">
                     <table className="w-full">
                       <thead className="bg-muted/50">
@@ -288,7 +288,7 @@ export function CSVImport({
                     </table>
                     {csvData.length > 5 && (
                       <div className="px-4 py-2 text-sm text-muted-foreground">
-                        ... and {csvData.length - 5} more rows
+                        {t("import.andMoreRows", { count: csvData.length - 5 })}
                       </div>
                     )}
                   </div>
@@ -299,9 +299,9 @@ export function CSVImport({
             <div className="space-y-4">
               <Alert>
                 <Check className="h-4 w-4" />
-                <AlertTitle>Ready to Import</AlertTitle>
+                <AlertTitle>{t("import.readyToImport")}</AlertTitle>
                 <AlertDescription>
-                  {parsedData.length} transactions will be imported. Please review the data below.
+                  {t("import.transactionsWillBeImported", { count: parsedData.length })}
                 </AlertDescription>
               </Alert>
 
@@ -347,7 +347,7 @@ export function CSVImport({
                 </table>
                 {parsedData.length > 10 && (
                   <div className="px-4 py-2 text-sm text-muted-foreground">
-                    ... and {parsedData.length - 10} more transactions
+                    {t("import.andMoreRows", { count: parsedData.length - 10 })}
                   </div>
                 )}
               </div>
@@ -360,24 +360,24 @@ export function CSVImport({
             <>
               <Button variant="outline" onClick={handleReset}>
                 <X className="mr-2 h-4 w-4" />
-                Back
+                {t("import.back")}
               </Button>
               <Button onClick={handleImport} className="bg-green-600 hover:bg-green-700">
                 <Check className="mr-2 h-4 w-4" />
-                Confirm Import
+                {t("import.confirmImport")}
               </Button>
             </>
           ) : (
             <>
               <Button variant="outline" onClick={onCancel}>
-                Cancel
+                {t("transactionModal.cancel")}
               </Button>
               <Button
                 onClick={() => setIsPreview(true)}
                 disabled={parsedData.length === 0 || errors.length > 0}
                 className="bg-purple-600 hover:bg-purple-700"
               >
-                Preview Import
+                {t("import.previewImport")}
               </Button>
             </>
           )}

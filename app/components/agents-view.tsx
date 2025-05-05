@@ -2,11 +2,47 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { ArrowDown, ArrowUp, Activity, ChevronLeft, DollarSign } from "lucide-react"
+import { ArrowDown, ArrowUp, Activity, ChevronLeft, DollarSign, Users } from "lucide-react"
 import { HotelLogo, HustleLogo } from "./team-logos"
+import { Button } from "@/components/ui/button"
 
 // Import the useTranslation hook
 import { useTranslation } from "react-i18next"
+
+// Add keyframe animation for glowing effect
+const glowAnimation = `
+  @keyframes glow {
+    0% {
+      box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+    }
+    50% {
+      box-shadow: 0 0 15px rgba(59, 130, 246, 0.8);
+    }
+    100% {
+      box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+    }
+  }
+
+  @keyframes orangeGlow {
+    0% {
+      box-shadow: 0 0 5px rgba(249, 115, 22, 0.5);
+    }
+    50% {
+      box-shadow: 0 0 15px rgba(249, 115, 22, 0.8);
+    }
+    100% {
+      box-shadow: 0 0 5px rgba(249, 115, 22, 0.5);
+    }
+  }
+
+  .glow-blue {
+    animation: glow 3s infinite ease-in-out;
+  }
+
+  .glow-orange {
+    animation: orangeGlow 3s infinite ease-in-out;
+  }
+`
 
 // Types
 type Transaction = {
@@ -32,33 +68,44 @@ type AgentDetails = {
   }
 }
 
-const AGENT_OPTIONS = {
-  Hotel: ["Primo", "Cu", "Kel", "Mar", "Vivian", "Jhe", "Lovely", "Ken", "Kyrie"],
-  Hustle: ["Joie", "Elocin", "Aubrey", "Xela"],
-}
-
 // Agents View Component
 export function AgentsView({
   selectedAgent,
   setSelectedAgent,
   getAgentStats,
   formatTableDate,
+  agentOptions = { Hotel: [], Hustle: [] },
+  onAddAgent,
+  onManageAgents,
+  onManageTranslations,
 }: {
   selectedAgent: string | null
   setSelectedAgent: (agent: string | null) => void
   getAgentStats: (agent: string) => AgentDetails
   formatTableDate: (date: string) => string
+  agentOptions?: { Hotel: string[]; Hustle: string[] }
+  onAddAgent: () => void
+  onManageAgents: () => void
+  onManageTranslations: () => void
 }) {
   // Add the translation hook
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
 
-  // Function to translate agent names
+  // Function to translate agent names - FIXED VERSION
   const translateAgentName = (name: string) => {
-    return t(`agents.${name}`)
+    // Check if the translation exists
+    const translationKey = `agents.${name}`
+    const hasTranslation = i18n.exists(translationKey)
+
+    // If translation exists, use it; otherwise, use the original name
+    return hasTranslation ? t(translationKey) : name
   }
 
   return (
     <div className="space-y-6">
+      <style jsx global>
+        {glowAnimation}
+      </style>
       {selectedAgent ? (
         // Agent Details View
         <div className="space-y-6">
@@ -231,92 +278,138 @@ export function AgentsView({
         </div>
       ) : (
         // Agents Grid View
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Hotel Team */}
-          <Card className="border-border/40 shadow-md">
-            <CardHeader className="pb-0">
-              <CardTitle className="text-lg font-medium">{t("dashboard.hotelTeam")}</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {AGENT_OPTIONS.Hotel.map((agent) => {
-                  const stats = getAgentStats(agent)
-                  return (
-                    <button
-                      key={agent}
-                      onClick={() => setSelectedAgent(agent)}
-                      className="bg-muted/50 p-4 rounded-lg hover:bg-muted transition-colors text-left hover:shadow-md"
-                    >
-                      <div className="flex items-center space-x-3 mb-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                          <HotelLogo className="w-7 h-7" />
-                        </div>
-                        <div>
-                          <p className="font-medium">{translateAgentName(agent)}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {t(`common.${stats.team.toLowerCase()}`)} {t("common.team")}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">{t("common.transactions")}</span>
-                          <span>{stats.stats.totalTransactions}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">{t("common.netBalance")}</span>
-                          <span>${stats.stats.netBalance.toLocaleString()}</span>
-                        </div>
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-            </CardContent>
-          </Card>
+        <div className="space-y-6">
+          {/* Unified Agent Management Button */}
+          <div className="flex justify-end">
+            <Button onClick={onManageAgents} className="bg-purple-600 hover:bg-purple-700 flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              {t("agentModal.manageAgents")}
+            </Button>
+          </div>
 
-          {/* Hustle Team */}
-          <Card className="border-border/40 shadow-md">
-            <CardHeader className="pb-0">
-              <CardTitle className="text-lg font-medium">{t("dashboard.hustleTeam")}</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {AGENT_OPTIONS.Hustle.map((agent) => {
-                  const stats = getAgentStats(agent)
-                  return (
-                    <button
-                      key={agent}
-                      onClick={() => setSelectedAgent(agent)}
-                      className="bg-muted/50 p-4 rounded-lg hover:bg-muted transition-colors text-left hover:shadow-md"
-                    >
-                      <div className="flex items-center space-x-3 mb-3">
-                        <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                          <HustleLogo className="w-7 h-7" />
-                        </div>
-                        <div>
-                          <p className="font-medium">{translateAgentName(agent)}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {t(`common.${stats.team.toLowerCase()}`)} {t("common.team")}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">{t("common.transactions")}</span>
-                          <span>{stats.stats.totalTransactions}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">{t("common.netBalance")}</span>
-                          <span>${stats.stats.netBalance.toLocaleString()}</span>
-                        </div>
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Hotel Team */}
+            <Card className="border-border/40 shadow-md">
+              <CardHeader className="pb-0">
+                <CardTitle className="text-lg font-medium">{t("dashboard.hotelTeam")}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {(agentOptions?.Hotel || [])
+                    .map((agent) => {
+                      const stats = getAgentStats(agent)
+                      return { agent, stats: stats.stats, team: stats.team }
+                    })
+                    .sort((a, b) => b.stats.netBalance - a.stats.netBalance)
+                    .map((item, index) => {
+                      const isTopPerformer = index === 0
+                      return (
+                        <button
+                          key={item.agent}
+                          onClick={() => setSelectedAgent(item.agent)}
+                          className={cn(
+                            "p-4 rounded-lg hover:bg-muted transition-colors text-left hover:shadow-md",
+                            isTopPerformer
+                              ? "bg-blue-100/50 dark:bg-blue-900/30 border-2 border-blue-300 dark:border-blue-700 glow-blue"
+                              : "bg-muted/50",
+                          )}
+                        >
+                          <div className="flex items-center space-x-3 mb-3">
+                            <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                              <HotelLogo className="w-7 h-7" />
+                            </div>
+                            <div className="relative">
+                              <p className="font-medium">{translateAgentName(item.agent)}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {t(`common.${item.team.toLowerCase()}`)} {t("common.team")}
+                              </p>
+                              {isTopPerformer && (
+                                <div className="absolute -right-7 -top-2 bg-blue-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
+                                  #1
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">{t("common.transactions")}</span>
+                              <span>{item.stats.totalTransactions}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">{t("common.netBalance")}</span>
+                              <span className={isTopPerformer ? "font-bold text-blue-600 dark:text-blue-400" : ""}>
+                                ${item.stats.netBalance.toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
+                        </button>
+                      )
+                    })}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Hustle Team */}
+            <Card className="border-border/40 shadow-md">
+              <CardHeader className="pb-0">
+                <CardTitle className="text-lg font-medium">{t("dashboard.hustleTeam")}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {(agentOptions?.Hustle || [])
+                    .map((agent) => {
+                      const stats = getAgentStats(agent)
+                      return { agent, stats: stats.stats, team: stats.team }
+                    })
+                    .sort((a, b) => b.stats.netBalance - a.stats.netBalance)
+                    .map((item, index) => {
+                      const isTopPerformer = index === 0
+                      return (
+                        <button
+                          key={item.agent}
+                          onClick={() => setSelectedAgent(item.agent)}
+                          className={cn(
+                            "p-4 rounded-lg hover:bg-muted transition-colors text-left hover:shadow-md",
+                            isTopPerformer
+                              ? "bg-orange-100/50 dark:bg-orange-900/30 border-2 border-orange-300 dark:border-orange-700 glow-orange"
+                              : "bg-muted/50",
+                          )}
+                        >
+                          <div className="flex items-center space-x-3 mb-3">
+                            <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                              <HustleLogo className="w-7 h-7" />
+                            </div>
+                            <div className="relative">
+                              <p className="font-medium">{translateAgentName(item.agent)}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {t(`common.${item.team.toLowerCase()}`)} {t("common.team")}
+                              </p>
+                              {isTopPerformer && (
+                                <div className="absolute -right-7 -top-2 bg-orange-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
+                                  #1
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">{t("common.transactions")}</span>
+                              <span>{item.stats.totalTransactions}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">{t("common.netBalance")}</span>
+                              <span className={isTopPerformer ? "font-bold text-orange-600 dark:text-orange-400" : ""}>
+                                ${item.stats.netBalance.toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
+                        </button>
+                      )
+                    })}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       )}
     </div>

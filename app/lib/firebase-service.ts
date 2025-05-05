@@ -1,4 +1,4 @@
-import { db, storage } from "./firebase"
+import { db } from "./firebase"
 import {
   collection,
   addDoc,
@@ -10,8 +10,8 @@ import {
   orderBy,
   getDoc,
   setDoc,
+  writeBatch, // Add this import
 } from "firebase/firestore"
-import { ref, uploadString, getDownloadURL, deleteObject } from "firebase/storage"
 // Add the missing import for getAuth
 import { getAuth } from "firebase/auth"
 
@@ -25,7 +25,6 @@ export type Transaction = {
   amount: number
   type: "Deposit" | "Withdrawal"
   notes?: string
-  receipt?: string | null
   firebaseId?: string // Add this to track Firestore document ID
 }
 
@@ -73,28 +72,77 @@ export const fetchTransactions = async (): Promise<Transaction[]> => {
   }
 }
 
+// Simplify the updateTransaction function to handle receipt uploads more reliably
+export const updateTransaction = async (transaction: Transaction): Promise<Transaction> => {
+  try {
+    console.log("Firebase service: updating transaction", {
+      id: transaction.id,
+      firebaseId: transaction.firebaseId,
+    })
+
+    if (!transaction.firebaseId) {
+      console.log("Transaction missing firebaseId, searching in Firestore...")
+
+      // Try to find the transaction in Firestore by its id
+      const q = query(collection(db, TRANSACTIONS_COLLECTION))
+      const querySnapshot = await getDocs(q)
+
+      let foundDoc = null
+      for (const doc of querySnapshot.docs) {
+        const data = doc.data() as Transaction
+        if (data.id === transaction.id) {
+          foundDoc = doc
+          console.log("Found matching transaction in Firestore with id:", doc.id)
+          break
+        }
+      }
+
+      if (foundDoc) {
+        transaction.firebaseId = foundDoc.id
+        console.log("Set transaction.firebaseId to:", foundDoc.id)
+      } else {
+        console.error("Could not find transaction in Firestore with id:", transaction.id)
+        throw new Error("Transaction doesn't have a Firestore ID and couldn't be found in Firestore")
+      }
+    }
+
+    // Update the transaction in Firestore
+    const transactionRef = doc(db, TRANSACTIONS_COLLECTION, transaction.firebaseId)
+    await updateDoc(transactionRef, {
+      ...transaction,
+      updatedAt: new Date().toISOString(),
+    })
+
+    console.log("Transaction updated successfully in Firestore")
+
+    // Return the updated transaction
+    return transaction
+  } catch (error) {
+    console.error("Error updating transaction:", error)
+    throw error
+  }
+}
+
+// Simplify the addTransaction function to handle receipt uploads more reliably
 export const addTransaction = async (transaction: Omit<Transaction, "id" | "firebaseId">): Promise<Transaction> => {
   try {
-    // If there's a receipt (base64 string), upload it to Firebase Storage
-    let receiptUrl = transaction.receipt
-    if (transaction.receipt && transaction.receipt.startsWith("data:")) {
-      const storageRef = ref(storage, `receipts/${Date.now()}`)
-      await uploadString(storageRef, transaction.receipt, "data_url")
-      receiptUrl = await getDownloadURL(storageRef)
-    }
+    // Create a clean transaction object without the firebaseId field
+    const { firebaseId, ...cleanTransaction } = transaction as any
+
+    // Generate a unique ID that includes a timestamp and random component
+    const uniqueId = transaction.id || Date.now() + Math.floor(Math.random() * 10000)
 
     // Add the transaction to Firestore
     const docRef = await addDoc(collection(db, TRANSACTIONS_COLLECTION), {
-      ...transaction,
-      receipt: receiptUrl,
+      ...cleanTransaction,
+      id: uniqueId,
       createdAt: new Date().toISOString(),
     })
 
     // Return the transaction with the Firestore ID
     return {
       ...transaction,
-      id: Date.now(), // Use timestamp as ID for now
-      receipt: receiptUrl,
+      id: uniqueId,
       firebaseId: docRef.id,
     } as Transaction
   } catch (error) {
@@ -103,72 +151,39 @@ export const addTransaction = async (transaction: Omit<Transaction, "id" | "fire
   }
 }
 
-export const updateTransaction = async (transaction: Transaction): Promise<Transaction> => {
+// Finally, let's fix the bulkDeleteTransactions function to handle receipt deletion better
+export const bulkDeleteTransactions = async (transactionIds: number[]): Promise<void> => {
   try {
-    if (!transaction.firebaseId) {
-      throw new Error("Transaction doesn't have a Firestore ID")
-    }
+    // Get all transactions that match the IDs
+    const q = query(collection(db, TRANSACTIONS_COLLECTION))
+    const querySnapshot = await getDocs(q)
 
-    // If there's a new receipt (base64 string), upload it to Firebase Storage
-    let receiptUrl = transaction.receipt
-    if (transaction.receipt && transaction.receipt.startsWith("data:")) {
-      // Delete old receipt if it exists
-      if (transaction.receipt && transaction.receipt.includes("firebasestorage")) {
-        try {
-          const oldReceiptRef = ref(storage, transaction.receipt)
-          await deleteObject(oldReceiptRef)
-        } catch (error) {
-          console.warn("Error deleting old receipt:", error)
-        }
+    // Create a batch using writeBatch
+    const batch = writeBatch(db)
+    const processedIds: number[] = []
+
+    querySnapshot.docs.forEach((docSnapshot) => {
+      const transaction = docSnapshot.data() as Transaction
+      if (transactionIds.includes(transaction.id)) {
+        processedIds.push(transaction.id)
+        const transactionRef = doc(db, TRANSACTIONS_COLLECTION, docSnapshot.id)
+        batch.delete(transactionRef)
       }
-
-      // Upload new receipt
-      const storageRef = ref(storage, `receipts/${Date.now()}`)
-      await uploadString(storageRef, transaction.receipt, "data_url")
-      receiptUrl = await getDownloadURL(storageRef)
-    }
-
-    // Update the transaction in Firestore
-    const transactionRef = doc(db, TRANSACTIONS_COLLECTION, transaction.firebaseId)
-    await updateDoc(transactionRef, {
-      ...transaction,
-      receipt: receiptUrl,
-      updatedAt: new Date().toISOString(),
     })
 
-    // Return the updated transaction
-    return {
-      ...transaction,
-      receipt: receiptUrl,
+    // Check if all transactions were found
+    if (processedIds.length !== transactionIds.length) {
+      const missingIds = transactionIds.filter((id) => !processedIds.includes(id))
+      console.warn(`Some transactions were not found in Firestore: ${missingIds.join(", ")}`)
     }
+
+    // Commit the batch to delete transactions
+    await batch.commit()
+
+    return Promise.resolve()
   } catch (error) {
-    console.error("Error updating transaction:", error)
-    throw error
-  }
-}
-
-export const deleteTransaction = async (transaction: Transaction): Promise<void> => {
-  try {
-    if (!transaction.firebaseId) {
-      throw new Error("Transaction doesn't have a Firestore ID")
-    }
-
-    // Delete receipt from storage if it exists
-    if (transaction.receipt && transaction.receipt.includes("firebasestorage")) {
-      try {
-        const receiptRef = ref(storage, transaction.receipt)
-        await deleteObject(receiptRef)
-      } catch (error) {
-        console.warn("Error deleting receipt:", error)
-      }
-    }
-
-    // Delete the transaction from Firestore
-    const transactionRef = doc(db, TRANSACTIONS_COLLECTION, transaction.firebaseId)
-    await deleteDoc(transactionRef)
-  } catch (error) {
-    console.error("Error deleting transaction:", error)
-    throw error
+    console.error("Error bulk deleting transactions:", error)
+    return Promise.reject(error)
   }
 }
 
@@ -351,7 +366,8 @@ export const bulkUpdateTransactions = async (
     const q = query(collection(db, TRANSACTIONS_COLLECTION))
     const querySnapshot = await getDocs(q)
 
-    const batch = db.batch()
+    // Create a batch using writeBatch instead of db.batch
+    const batch = writeBatch(db)
 
     querySnapshot.docs.forEach((docSnapshot) => {
       const transaction = docSnapshot.data() as Transaction
@@ -371,35 +387,88 @@ export const bulkUpdateTransactions = async (
   }
 }
 
-export const bulkDeleteTransactions = async (transactionIds: number[]): Promise<void> => {
+export const deleteTransaction = async (transaction: Transaction): Promise<void> => {
   try {
-    // Get all transactions that match the IDs
-    const q = query(collection(db, TRANSACTIONS_COLLECTION))
-    const querySnapshot = await getDocs(q)
+    if (!transaction.firebaseId) {
+      throw new Error("Transaction doesn't have a Firestore ID")
+    }
 
-    const batch = db.batch()
-
-    querySnapshot.docs.forEach((docSnapshot) => {
-      const transaction = docSnapshot.data() as Transaction
-      if (transactionIds.includes(transaction.id)) {
-        const transactionRef = doc(db, TRANSACTIONS_COLLECTION, docSnapshot.id)
-        batch.delete(transactionRef)
-
-        // Also delete receipt if it exists
-        if (transaction.receipt && transaction.receipt.includes("firebasestorage")) {
-          try {
-            const receiptRef = ref(storage, transaction.receipt)
-            deleteObject(receiptRef).catch((err) => console.warn("Error deleting receipt:", err))
-          } catch (error) {
-            console.warn("Error creating receipt reference:", error)
-          }
-        }
-      }
-    })
-
-    await batch.commit()
+    const transactionRef = doc(db, TRANSACTIONS_COLLECTION, transaction.firebaseId)
+    await deleteDoc(transactionRef)
   } catch (error) {
-    console.error("Error bulk deleting transactions:", error)
+    console.error("Error deleting transaction:", error)
+    throw error
+  }
+}
+
+// Add these functions at the end of the file
+
+// Agent management functions
+export const fetchAgents = async (): Promise<Record<string, string[]>> => {
+  try {
+    const agentsDoc = await getDoc(doc(db, "settings", "agents"))
+    if (agentsDoc.exists()) {
+      return agentsDoc.data().agents || { Hotel: [], Hustle: [] }
+    }
+    return { Hotel: [], Hustle: [] }
+  } catch (error) {
+    console.error("Error fetching agents:", error)
+    throw error
+  }
+}
+
+export const saveAgents = async (agents: Record<string, string[]>): Promise<void> => {
+  try {
+    await setDoc(doc(db, "settings", "agents"), { agents })
+  } catch (error) {
+    console.error("Error saving agents:", error)
+    throw error
+  }
+}
+
+export const addAgent = async (team: "Hotel" | "Hustle", agentName: string): Promise<boolean> => {
+  try {
+    // Get current agents
+    const currentAgents = await fetchAgents()
+
+    // Check if agent already exists
+    if (currentAgents[team] && currentAgents[team].includes(agentName)) {
+      return false
+    }
+
+    // Add the new agent
+    if (!currentAgents[team]) {
+      currentAgents[team] = []
+    }
+    currentAgents[team].push(agentName)
+
+    // Save updated agents
+    await saveAgents(currentAgents)
+    return true
+  } catch (error) {
+    console.error("Error adding agent:", error)
+    throw error
+  }
+}
+
+export const deleteAgent = async (team: "Hotel" | "Hustle", agentName: string): Promise<boolean> => {
+  try {
+    // Get current agents
+    const currentAgents = await fetchAgents()
+
+    // Check if agent exists
+    if (!currentAgents[team] || !currentAgents[team].includes(agentName)) {
+      return false
+    }
+
+    // Remove the agent
+    currentAgents[team] = currentAgents[team].filter((agent) => agent !== agentName)
+
+    // Save updated agents
+    await saveAgents(currentAgents)
+    return true
+  } catch (error) {
+    console.error("Error deleting agent:", error)
     throw error
   }
 }

@@ -15,6 +15,7 @@ import {
   FileDown,
   StickyNote,
   Loader2,
+  Server,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -44,6 +45,9 @@ import {
   updateTransaction as updateTransactionInFirebase,
   deleteTransaction as deleteTransactionFromFirebase,
   type Transaction,
+  fetchAgents,
+  addAgent as addAgentToFirebase,
+  deleteAgent as deleteAgentFromFirebase,
 } from "./lib/firebase-service"
 
 // Import Protected Route
@@ -54,6 +58,10 @@ import { UserProfile } from "./components/user-profile"
 
 // Add the missing import if needed
 import { getAuth } from "firebase/auth"
+
+// Update the Page component to use the new UnifiedAgentManager component
+// First, add the import at the top with other imports:
+import { UnifiedAgentManager } from "./components/unified-agent-manager"
 
 // Types
 type DashboardFilters = {
@@ -66,8 +74,8 @@ type SortDirection = "asc" | "desc" | null
 type SortField = "date" | "amount" | null
 
 // Constants
-const AGENT_OPTIONS = {
-  Hotel: ["Primo", "Cu", "Kel", "Mar", "Vivian", "Jhe", "Thac", "Lovely", "Ken", "Kyrie", "Annie"],
+const agentOptionsInitialState: Record<string, string[]> = {
+  Hotel: ["Primo", "Cu", "Kel", "Mar", "Vivian", "Jhe", "Lovely", "Ken", "Kyrie"],
   Hustle: ["Joie", "Elocin", "Aubrey", "Xela"],
 }
 
@@ -209,6 +217,10 @@ export default function Page() {
   const [showImportModal, setShowImportModal] = useState(false)
   const [showExportModal, setShowExportModal] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  // Replace them with a single state variable:
+  const [showAgentManager, setShowAgentManager] = useState(false)
+  const [agentOptions, setAgentOptions] = useState<Record<string, string[]>>(agentOptionsInitialState)
+  // Add this state in the Page component
 
   // Dashboard filters
   const [dashboardFilters, setDashboardFilters] = useState<DashboardFilters>({
@@ -217,6 +229,81 @@ export default function Page() {
     year: new Date().getFullYear().toString(),
   })
 
+  // Move these functions inside the component
+  const addAgentToTeam = async (team: "Hotel" | "Hustle", agentName: string) => {
+    try {
+      // Check if agent already exists locally
+      if (agentOptions[team].includes(agentName)) {
+        console.log(`${agentName} already exists in ${team} team`)
+        return false
+      }
+
+      // Add agent to Firebase
+      const success = await addAgentToFirebase(team, agentName)
+
+      if (success) {
+        // Update local state
+        setAgentOptions((prev) => ({
+          ...prev,
+          [team]: [...prev[team], agentName],
+        }))
+        console.log(`Added ${agentName} to ${team} team`)
+      }
+
+      return success
+    } catch (error) {
+      console.error("Error adding agent:", error)
+      toast({
+        title: "Error",
+        description: "Failed to add agent. Please try again.",
+        variant: "destructive",
+      })
+      return false
+    }
+  }
+
+  // Add a new function to delete agents
+  const deleteAgentFromTeam = async (team: "Hotel" | "Hustle", agentName: string) => {
+    try {
+      // Check if agent is used in any transactions
+      const agentTransactions = transactions.filter((t) => t.team === team && t.agent === agentName)
+
+      if (agentTransactions.length > 0) {
+        toast({
+          title: "Cannot Delete Agent",
+          description: `This agent has ${agentTransactions.length} transactions. Please reassign or delete these transactions first.`,
+          variant: "destructive",
+        })
+        return false
+      }
+
+      // Delete agent from Firebase
+      const success = await deleteAgentFromFirebase(team, agentName)
+
+      if (success) {
+        // Update local state
+        setAgentOptions((prev) => ({
+          ...prev,
+          [team]: prev[team].filter((agent) => agent !== agentName),
+        }))
+        toast({
+          title: "Agent Deleted",
+          description: `${agentName} has been removed from the ${team} team.`,
+        })
+      }
+
+      return success
+    } catch (error) {
+      console.error("Error deleting agent:", error)
+      toast({
+        title: "Error",
+        description: "Failed to delete agent. Please try again.",
+        variant: "destructive",
+      })
+      return false
+    }
+  }
+
   // Initialize
   useEffect(() => {
     // Set dark mode by default
@@ -224,18 +311,28 @@ export default function Page() {
     document.documentElement.classList.add("dark")
 
     // Fetch transactions from Firebase
-    const loadTransactions = async () => {
+    const loadData = async () => {
       try {
         // Check authentication state before fetching
         const auth = getAuth()
         if (!auth.currentUser) {
-          console.log("User not authenticated yet, skipping transaction fetch")
+          console.log("User not authenticated yet, skipping data fetch")
           return
         }
 
         setIsLoading(true)
-        const fetchedTransactions = await fetchTransactions()
+
+        // Fetch transactions and agents in parallel
+        const [fetchedTransactions, fetchedAgents] = await Promise.all([fetchTransactions(), fetchAgents()])
+
         setTransactions(fetchedTransactions)
+
+        // Merge default agents with fetched agents to ensure we always have some agents
+        const mergedAgents = {
+          Hotel: [...new Set([...agentOptionsInitialState.Hotel, ...(fetchedAgents.Hotel || [])])],
+          Hustle: [...new Set([...agentOptionsInitialState.Hustle, ...(fetchedAgents.Hustle || [])])],
+        }
+        setAgentOptions(mergedAgents)
 
         // Set the next ID based on the highest ID in the fetched transactions
         if (fetchedTransactions.length > 0) {
@@ -243,10 +340,10 @@ export default function Page() {
           setNextId(maxId + 1)
         }
       } catch (error) {
-        console.error("Error loading transactions:", error)
+        console.error("Error loading data:", error)
         toast({
           title: "Error",
-          description: "Failed to load transactions. Please try again.",
+          description: "Failed to load data. Please try again.",
           variant: "destructive",
         })
       } finally {
@@ -254,7 +351,7 @@ export default function Page() {
       }
     }
 
-    loadTransactions()
+    loadData()
   }, [])
 
   // Apply dark mode
@@ -345,15 +442,37 @@ export default function Page() {
   // CRUD operations with toast notifications and Firebase integration
   const addTransaction = async (transaction: Omit<Transaction, "id" | "firebaseId">) => {
     try {
-      setIsLoading(true)
+      // Create a temporary ID for optimistic UI update
+      const tempId = Date.now() + Math.floor(Math.random() * 1000) // Add randomness to ensure uniqueness
+
+      // Create a temporary transaction object for the UI
+      const tempTransaction: Transaction = {
+        ...transaction,
+        id: tempId,
+      }
+
+      // Optimistically update the UI immediately
+      setTransactions((prev) => [...prev, tempTransaction])
+
+      // Show a loading toast
+      toast({
+        title: "Adding Transaction",
+        description: "Your transaction is being saved...",
+      })
+
+      // Close the modal immediately to improve perceived performance
+      setShowTransactionModal(false)
+
+      // Actually save the transaction in the background
       const newTransaction = await addTransactionToFirebase({
         ...transaction,
         id: nextId,
       })
 
-      setTransactions((prev) => [...prev, newTransaction])
+      // Update the transactions list with the real transaction from Firebase
+      setTransactions((prev) => prev.map((t) => (t.id === tempId ? newTransaction : t)))
+
       setNextId((prev) => prev + 1)
-      setShowTransactionModal(false)
 
       // Show success toast
       toast({
@@ -365,6 +484,8 @@ export default function Page() {
           </ToastAction>
         ),
       })
+
+      return newTransaction
     } catch (error) {
       console.error("Error adding transaction:", error)
       toast({
@@ -372,16 +493,43 @@ export default function Page() {
         description: "Failed to add transaction. Please try again.",
         variant: "destructive",
       })
-    } finally {
-      setIsLoading(false)
+      throw error
     }
   }
 
   const updateTransaction = async (transaction: Transaction) => {
     try {
       setIsLoading(true)
+
+      // Add detailed logging to help diagnose the issue
+      console.log(
+        "Updating transaction:",
+        JSON.stringify({
+          id: transaction.id,
+          firebaseId: transaction.firebaseId,
+          hasReceipt: !!transaction.receipt,
+          receiptType: transaction.receipt ? (transaction.receipt.startsWith("data:") ? "base64" : "url") : "none",
+        }),
+      )
+
+      // Check if firebaseId exists, if not, try to find it
+      if (!transaction.firebaseId) {
+        console.log("Transaction missing firebaseId, searching in existing transactions...")
+        // Find the existing transaction to get its firebaseId
+        const existingTransaction = transactions.find((t) => t.id === transaction.id)
+
+        if (existingTransaction && existingTransaction.firebaseId) {
+          console.log("Found matching transaction with firebaseId:", existingTransaction.firebaseId)
+          transaction.firebaseId = existingTransaction.firebaseId
+        } else {
+          console.error("Could not find transaction with id:", transaction.id)
+          throw new Error("Transaction doesn't have a Firestore ID and couldn't be found in local state")
+        }
+      }
+
       const updatedTransaction = await updateTransactionInFirebase(transaction)
 
+      // Update the transactions state with the updated transaction
       setTransactions((prev) => prev.map((t) => (t.id === transaction.id ? updatedTransaction : t)))
 
       setEditingTransaction(null)
@@ -401,7 +549,7 @@ export default function Page() {
       console.error("Error updating transaction:", error)
       toast({
         title: "Error",
-        description: "Failed to update transaction. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to update transaction. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -490,7 +638,7 @@ export default function Page() {
   // Get agent stats
   const getAgentStats = (agentName: string) => {
     const agentTransactions = transactions.filter((t) => t.agent === agentName)
-    const team = AGENT_OPTIONS.Hotel.includes(agentName) ? "Hotel" : "Hustle"
+    const team = agentOptions.Hotel.includes(agentName) ? "Hotel" : "Hustle"
 
     const totalDeposits = agentTransactions.filter((t) => t.type === "Deposit").reduce((sum, t) => sum + t.amount, 0)
 
@@ -583,6 +731,15 @@ export default function Page() {
               <StickyNote className="w-5 h-5" />
               <span>{t("nav.notes")}</span>
             </button>
+            <a
+              href="https://sellerglobal.net/admin/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors mt-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <Server className="w-5 h-5" />
+              <span>{t("nav.backend")}</span>
+            </a>
           </div>
 
           <div className="absolute bottom-4 left-4 right-4 space-y-2">
@@ -632,6 +789,7 @@ export default function Page() {
               </h1>
             </div>
 
+            {/* Update the header section to include a manage agents button */}
             <div className="flex items-center space-x-4">
               <LanguageSwitcher />
               <button className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
@@ -662,7 +820,7 @@ export default function Page() {
           {/* Transactions View */}
           {currentView === "tables" && (
             <TransactionsView
-              transactions={transactions}
+              transactions={getFilteredAndSortedTransactions()}
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
               selectedTeam={selectedTeam}
@@ -679,6 +837,9 @@ export default function Page() {
               setShowTransactionModal={setShowTransactionModal}
               deleteTransaction={deleteTransaction}
               formatTableDate={formatTableDate}
+              setTransactions={setTransactions}
+              updateTransaction={updateTransaction}
+              agentOptions={agentOptions}
             />
           )}
 
@@ -689,6 +850,8 @@ export default function Page() {
               setSelectedAgent={setSelectedAgent}
               getAgentStats={getAgentStats}
               formatTableDate={formatTableDate}
+              agentOptions={agentOptions}
+              onManageAgents={() => setShowAgentManager(true)}
             />
           )}
 
@@ -703,6 +866,7 @@ export default function Page() {
               setShowTransactionModal={setShowTransactionModal}
               addTransaction={addTransaction}
               updateTransaction={updateTransaction}
+              agentOptions={agentOptions}
             />
           )}
 
@@ -718,6 +882,15 @@ export default function Page() {
         {/* Toaster */}
         <Toaster />
       </div>
+      {/* Unified Agent Manager */}
+      {showAgentManager && (
+        <UnifiedAgentManager
+          agentOptions={agentOptions}
+          onAddAgent={addAgentToTeam}
+          onDeleteAgent={deleteAgentFromTeam}
+          onClose={() => setShowAgentManager(false)}
+        />
+      )}
     </ProtectedRoute>
   )
 }

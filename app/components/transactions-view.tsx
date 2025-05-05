@@ -1,6 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import React from "react"
+
+import { useState, useRef, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,7 +12,6 @@ import { cn } from "@/lib/utils"
 import {
   ArrowDown,
   ArrowUp,
-  Edit,
   Plus,
   Search,
   StickyNote,
@@ -19,8 +20,9 @@ import {
   DollarSign,
   Users,
   ArrowRightLeft,
-  FileImage,
   Loader2,
+  Check,
+  X,
 } from "lucide-react"
 import { TeamBadge } from "./team-logos"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -45,6 +47,7 @@ type Transaction = {
   type: "Deposit" | "Withdrawal"
   notes?: string
   receipt?: string | null
+  firebaseId?: string
 }
 
 type SortDirection = "asc" | "desc" | null
@@ -52,10 +55,10 @@ type SortField = "date" | "amount" | null
 
 type BulkActionType = "delete" | "changeType" | "changeTeam" | "changeDate" | "changeAmount" | null
 
-const AGENT_OPTIONS = {
-  Hotel: ["Primo", "Cu", "Kel", "Mar", "Vivian", "Jhe", "Thac", "Lovely", "Ken", "Kyrie", "Annie"],
-  Hustle: ["Joie", "Elocin", "Aubrey", "Xela"],
-}
+// const AGENT_OPTIONS = {
+//   Hotel: ["Primo", "Cu", "Kel", "Mar", "Vivian", "Jhe", "Lovely", "Ken", "Kyrie"],
+//   Hustle: ["Joie", "Elocin", "Aubrey", "Xela"],
+// }
 
 // Transactions View Component
 export function TransactionsView({
@@ -76,6 +79,9 @@ export function TransactionsView({
   setShowTransactionModal,
   deleteTransaction,
   formatTableDate,
+  setTransactions,
+  updateTransaction,
+  agentOptions,
 }: {
   transactions: Transaction[]
   searchQuery: string
@@ -94,6 +100,9 @@ export function TransactionsView({
   setShowTransactionModal: (show: boolean) => void
   deleteTransaction: (id: number) => void
   formatTableDate: (date: string) => string
+  setTransactions: (transactions: Transaction[]) => void
+  updateTransaction: (transaction: Transaction) => Promise<Transaction>
+  agentOptions: Record<string, string[]>
 }) {
   // Add the translation hook
   const { t } = useTranslation()
@@ -104,9 +113,6 @@ export function TransactionsView({
   const [selectAll, setSelectAll] = useState(false)
   const [currentBulkAction, setCurrentBulkAction] = useState<BulkActionType>(null)
 
-  // State for viewing receipt
-  const [viewingReceipt, setViewingReceipt] = useState<string | null>(null)
-
   // State for bulk action dialogs
   const [bulkActionValue, setBulkActionValue] = useState<string>("")
   const [bulkActionDate, setBulkActionDate] = useState<string>(new Date().toISOString().split("T")[0])
@@ -114,6 +120,11 @@ export function TransactionsView({
 
   // Add isLoading state
   const [isLoading, setIsLoading] = useState(false)
+
+  // Add state for inline editing
+  const [editingInlineId, setEditingInlineId] = useState<number | null>(null)
+  const [inlineFormData, setInlineFormData] = useState<Transaction | null>(null)
+  const inlineFormRef = useRef<HTMLTableRowElement>(null)
 
   // Get filtered transactions
   const filteredTransactions = getFilteredAndSortedTransactions()
@@ -146,38 +157,81 @@ export function TransactionsView({
     // Confirm deletion
     if (window.confirm(t("bulkActions.confirmDelete", { count: selectedTransactions.length }))) {
       try {
-        setIsLoading(true)
-
-        // Get the transactions to delete
+        // Store the transactions to be deleted for potential rollback
         const transactionsToDelete = transactions.filter((t) => selectedTransactions.includes(t.id))
 
-        // Delete transactions in Firebase
-        await bulkDeleteTransactions(selectedTransactions)
+        // Optimistically update UI immediately
+        if (typeof setTransactions === "function") {
+          // If setTransactions is a function, use it to update state
+          setTransactions((prev) => prev.filter((t) => !selectedTransactions.includes(t.id)))
+        } else {
+          // Fallback: directly modify the transactions array
+          const indicesToRemove = selectedTransactions
+            .map((id) => transactions.findIndex((t) => t.id === id))
+            .filter((index) => index !== -1)
 
-        // Delete each selected transaction
-        selectedTransactions.forEach((id) => {
-          deleteTransaction(id)
-        })
+          // Remove items in reverse order to avoid index shifting issues
+          indicesToRemove
+            .sort((a, b) => b - a)
+            .forEach((index) => {
+              transactions.splice(index, 1)
+            })
+        }
 
         // Clear selection
+        const deletedCount = selectedTransactions.length
         setSelectedTransactions([])
         setSelectAll(false)
 
-        // Show success toast
+        // Close the dialog by setting currentBulkAction to null
+        setCurrentBulkAction(null)
+
+        // Show immediate success toast
         toast({
           title: t("bulkActions.deleteSuccess"),
-          description: t("bulkActions.deleteSuccessDesc", { count: selectedTransactions.length }),
+          description: t("bulkActions.deleteSuccessDesc", { count: deletedCount }),
         })
+
+        // Perform the actual deletion in the background
+        setIsLoading(true)
+
+        try {
+          // Delete transactions in Firebase
+          await bulkDeleteTransactions(selectedTransactions)
+          setIsLoading(false)
+        } catch (deleteError) {
+          console.error("Error bulk deleting transactions:", deleteError)
+
+          // If the Firebase deletion fails, rollback the UI changes
+          if (typeof setTransactions === "function") {
+            setTransactions((prev) => [...prev, ...transactionsToDelete])
+          } else {
+            // Fallback: directly add back the deleted transactions
+            transactions.push(...transactionsToDelete)
+          }
+
+          // Show error toast
+          toast({
+            title: "Error",
+            description: "Failed to delete some transactions. The data has been restored.",
+            variant: "destructive",
+          })
+          setIsLoading(false)
+        }
       } catch (error) {
-        console.error("Error bulk deleting transactions:", error)
+        console.error("Error in bulk delete operation:", error)
         toast({
           title: "Error",
-          description: "Failed to delete transactions. Please try again.",
+          description: "An unexpected error occurred. Please try again.",
           variant: "destructive",
         })
-      } finally {
         setIsLoading(false)
+        // Ensure dialog is closed on error
+        setCurrentBulkAction(null)
       }
+    } else {
+      // User canceled the deletion, close the dialog
+      setCurrentBulkAction(null)
     }
   }
 
@@ -226,7 +280,11 @@ export function TransactionsView({
       })
 
       // Update transactions in parent component
-      transactions.splice(0, transactions.length, ...updatedTransactions)
+      if (typeof setTransactions === "function") {
+        setTransactions([...updatedTransactions])
+      } else {
+        transactions.splice(0, transactions.length, ...updatedTransactions)
+      }
 
       // Reset state
       setCurrentBulkAction(null)
@@ -246,10 +304,121 @@ export function TransactionsView({
         description: "Failed to update transactions. Please try again.",
         variant: "destructive",
       })
+      // Ensure dialog is closed on error
+      setCurrentBulkAction(null)
     } finally {
       setIsLoading(false)
     }
   }
+
+  // Start inline editing for a transaction
+  const startInlineEdit = (transaction: Transaction) => {
+    setEditingInlineId(transaction.id)
+    setInlineFormData({ ...transaction })
+  }
+
+  // Cancel inline editing
+  const cancelInlineEdit = () => {
+    setEditingInlineId(null)
+    setInlineFormData(null)
+  }
+
+  // Save inline edits
+  const saveInlineEdit = async () => {
+    if (!inlineFormData) return
+
+    try {
+      // Validate required fields
+      if (!inlineFormData.team || !inlineFormData.agent || !inlineFormData.date || !inlineFormData.type) {
+        toast({
+          title: "Validation Error",
+          description: "Please fill in all required fields: Team, Agent, Date, and Type.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Validate amount
+      if (inlineFormData.amount <= 0) {
+        toast({
+          title: "Validation Error",
+          description: "Amount must be greater than zero.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      setIsLoading(true)
+
+      // Create a local copy of the updated transaction
+      const updatedTransaction = { ...inlineFormData }
+
+      // Check if updateTransaction is a function
+      if (typeof updateTransaction === "function") {
+        try {
+          const result = await updateTransaction(inlineFormData)
+          // If successful, use the returned transaction
+          Object.assign(updatedTransaction, result)
+        } catch (error) {
+          console.warn("Error calling updateTransaction:", error)
+          // Continue with the local copy if updateTransaction fails
+        }
+      } else {
+        console.warn("updateTransaction function is not provided, using fallback implementation")
+      }
+
+      // Check if setTransactions is a function
+      if (typeof setTransactions === "function") {
+        // Update the transaction in the local state
+        setTransactions((prev) => prev.map((t) => (t.id === updatedTransaction.id ? updatedTransaction : t)))
+      } else {
+        console.warn("setTransactions function is not provided, cannot update local state")
+        // Find the transaction in the transactions array and update it directly
+        const index = transactions.findIndex((t) => t.id === updatedTransaction.id)
+        if (index !== -1) {
+          transactions[index] = updatedTransaction
+        }
+      }
+
+      // Reset editing state
+      setEditingInlineId(null)
+      setInlineFormData(null)
+
+      // Show success toast
+      toast({
+        title: t("transactionModal.updateSuccess") || "Update Successful",
+        description: t("transactionModal.updateSuccessDesc") || "Transaction has been updated successfully.",
+      })
+    } catch (error) {
+      console.error("Error saving inline edit:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update transaction. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Handle click outside to cancel inline editing
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (inlineFormRef.current && !inlineFormRef.current.contains(event.target as Node)) {
+        cancelInlineEdit()
+      }
+    }
+
+    // Add event listener if we're in edit mode
+    if (editingInlineId !== null) {
+      document.addEventListener("mousedown", handleClickOutside)
+    }
+
+    // Clean up
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [editingInlineId])
 
   // Add a loading indicator at the top of the return statement
   return (
@@ -288,7 +457,7 @@ export function TransactionsView({
               <Label className="mb-2 block">{t("transactions.team")}</Label>
               <Select value={selectedTeam} onValueChange={setSelectedTeam}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="All Teams" />
+                  <SelectValue placeholder={t("transactions.allTeams")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("transactions.allTeams")}</SelectItem>
@@ -302,7 +471,7 @@ export function TransactionsView({
               <Label className="mb-2 block">{t("transactions.type")}</Label>
               <Select value={selectedType} onValueChange={setSelectedType}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="All Types" />
+                  <SelectValue placeholder={t("transactions.allTypes")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("transactions.allTypes")}</SelectItem>
@@ -319,14 +488,21 @@ export function TransactionsView({
                 onValueChange={(value) => setSelectedAgent(value === "all" ? null : value)}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="All Agents" />
+                  <SelectValue placeholder={t("transactions.allAgents")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("transactions.allAgents")}</SelectItem>
-                  {Object.entries(AGENT_OPTIONS).map(([team, agents]) => (
-                    <SelectItem key={team} value={team} disabled className="font-semibold">
-                      {team}
-                    </SelectItem>
+                  {Object.entries(agentOptions).map(([team, agents]) => (
+                    <React.Fragment key={team}>
+                      <SelectItem value={team} disabled className="font-semibold">
+                        {team}
+                      </SelectItem>
+                      {agents.map((agent) => (
+                        <SelectItem key={agent} value={agent}>
+                          {t(`agents.${agent}`, agent)} {/* Fallback to agent name if translation missing */}
+                        </SelectItem>
+                      ))}
+                    </React.Fragment>
                   ))}
                 </SelectContent>
               </Select>
@@ -462,6 +638,9 @@ export function TransactionsView({
                     </div>
                   </div>
                 </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  {t("transactions.shopId")}
+                </th>
                 <th
                   className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer"
                   onClick={() => handleSort("amount")}
@@ -492,84 +671,185 @@ export function TransactionsView({
                   {t("transactions.type")}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  {t("receipt.receipt")}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   {t("transactions.actions")}
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filteredTransactions.map((transaction) => (
-                <tr key={transaction.id} className="hover:bg-muted/50 transition-colors">
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <Checkbox
-                      checked={selectedTransactions.includes(transaction.id)}
-                      onCheckedChange={() => handleSelectTransaction(transaction.id)}
-                      aria-label={`Select transaction ${transaction.id}`}
-                    />
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <TeamBadge team={transaction.team} />
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">{t(`agents.${transaction.agent}`)}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">{formatTableDate(transaction.date)}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">${transaction.amount.toLocaleString()}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <span
-                      className={cn(
-                        "inline-flex rounded-full px-2 py-0.5 text-xs font-semibold",
-                        transaction.type === "Deposit"
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                          : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
-                      )}
-                    >
-                      {t(`common.${transaction.type.toLowerCase()}`)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    {transaction.receipt ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setViewingReceipt(transaction.receipt)}
-                        className="p-0 h-8 w-8"
+              {filteredTransactions.map((transaction) =>
+                editingInlineId === transaction.id ? (
+                  // Inline editing row
+                  <tr key={transaction.id} className="bg-muted/30" ref={inlineFormRef}>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <Checkbox
+                        checked={selectedTransactions.includes(transaction.id)}
+                        onCheckedChange={() => handleSelectTransaction(transaction.id)}
+                        aria-label={`Select transaction ${transaction.id}`}
+                      />
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <Select
+                        value={inlineFormData?.team}
+                        onValueChange={(value) =>
+                          setInlineFormData({ ...inlineFormData!, team: value as "Hotel" | "Hustle" })
+                        }
                       >
-                        <FileImage className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                      </Button>
-                    ) : (
-                      <span className="text-muted-foreground text-sm">-</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => {
-                          setEditingTransaction(transaction)
-                          setShowTransactionModal(true)
-                        }}
-                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                        <SelectTrigger className="h-8 w-24">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Hotel">{t("common.hotel")}</SelectItem>
+                          <SelectItem value="Hustle">{t("common.hustle")}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <Select
+                        value={inlineFormData?.agent}
+                        onValueChange={(value) => setInlineFormData({ ...inlineFormData!, agent: value })}
                       >
-                        <Edit className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => deleteTransaction(transaction.id)}
-                        className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+                        <SelectTrigger className="h-8 w-24">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {agentOptions[inlineFormData?.team || "Hotel"].map((agent) => (
+                            <SelectItem key={agent} value={agent}>
+                              {t(`agents.${agent}`, agent)} {/* Fallback to agent name if translation missing */}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <Input
+                        type="date"
+                        value={inlineFormData?.date}
+                        onChange={(e) => setInlineFormData({ ...inlineFormData!, date: e.target.value })}
+                        className="h-8 w-32"
+                      />
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <Input
+                        type="text"
+                        value={inlineFormData?.shopId}
+                        onChange={(e) => setInlineFormData({ ...inlineFormData!, shopId: e.target.value })}
+                        className="h-8 w-24"
+                      />
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <Input
+                        type="number"
+                        value={inlineFormData?.amount}
+                        onChange={(e) => setInlineFormData({ ...inlineFormData!, amount: Number(e.target.value) })}
+                        className="h-8 w-24"
+                        min="0"
+                        step="0.01"
+                      />
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <Select
+                        value={inlineFormData?.type}
+                        onValueChange={(value) =>
+                          setInlineFormData({ ...inlineFormData!, type: value as "Deposit" | "Withdrawal" })
+                        }
                       >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                      {transaction.notes && (
-                        <button
-                          title={transaction.notes}
-                          className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
+                        <SelectTrigger className="h-8 w-28">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Deposit">{t("common.deposit")}</SelectItem>
+                          <SelectItem value="Withdrawal">{t("common.withdrawal")}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex space-x-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={saveInlineEdit}
+                          className="h-8 w-8 p-0 text-green-600 hover:text-green-800 dark:text-green-500 dark:hover:text-green-400"
                         >
-                          <StickyNote className="w-5 h-5" />
+                          <Check className="h-5 w-5" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={cancelInlineEdit}
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-800 dark:text-red-500 dark:hover:text-red-400"
+                        >
+                          <X className="h-5 w-5" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  // Normal row (not being edited)
+                  <tr
+                    key={transaction.id}
+                    className="hover:bg-muted/50 transition-colors cursor-pointer"
+                    onClick={(e) => {
+                      // Don't trigger row edit if clicking on checkbox, delete button, or notes icon
+                      if (
+                        e.target instanceof HTMLElement &&
+                        (e.target.closest("button") || e.target.closest('[role="checkbox"]'))
+                      ) {
+                        return
+                      }
+                      startInlineEdit(transaction)
+                    }}
+                  >
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <Checkbox
+                        checked={selectedTransactions.includes(transaction.id)}
+                        onCheckedChange={() => handleSelectTransaction(transaction.id)}
+                        aria-label={`Select transaction ${transaction.id}`}
+                      />
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <TeamBadge team={transaction.team} />
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">{t(`agents.${transaction.agent}`)}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">{formatTableDate(transaction.date)}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">{transaction.shopId}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">${transaction.amount.toLocaleString()}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span
+                        className={cn(
+                          "inline-flex rounded-full px-2 py-0.5 text-xs font-semibold",
+                          transaction.type === "Deposit"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                            : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+                        )}
+                      >
+                        {t(`common.${transaction.type.toLowerCase()}`)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation() // Prevent row click
+                            deleteTransaction(transaction.id)
+                          }}
+                          className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+                        >
+                          <Trash2 className="w-5 h-5" />
                         </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        {transaction.notes && (
+                          <button
+                            title={transaction.notes}
+                            onClick={(e) => e.stopPropagation()} // Prevent row click
+                            className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
+                          >
+                            <StickyNote className="w-5 h-5" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ),
+              )}
             </tbody>
           </table>
         </div>
@@ -731,27 +1011,6 @@ export function TransactionsView({
               </Button>
               <Button onClick={executeBulkAction} className="bg-purple-600 hover:bg-purple-700">
                 {t("bulkActions.apply")}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {/* Receipt Viewer Dialog */}
-      {viewingReceipt && (
-        <Dialog open={true} onOpenChange={() => setViewingReceipt(null)}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>{t("receipt.viewReceipt")}</DialogTitle>
-            </DialogHeader>
-            <div className="py-4">
-              <div className="border rounded-md overflow-hidden">
-                <img src={viewingReceipt || "/placeholder.svg"} alt={t("receipt.receipt")} className="w-full h-auto" />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setViewingReceipt(null)}>
-                {t("receipt.close")}
               </Button>
             </DialogFooter>
           </DialogContent>
