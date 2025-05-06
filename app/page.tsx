@@ -59,7 +59,7 @@ import ProtectedRoute from "./components/protected-route"
 import { UserProfile } from "./components/user-profile"
 
 // Add the missing import if needed
-import { getAuth } from "firebase/auth"
+import { getAuth, onAuthStateChanged } from "firebase/auth"
 
 // Update the Page component to use the new UnifiedAgentManager component
 // First, add the import at the top with other imports:
@@ -359,16 +359,11 @@ export default function Page() {
     setDarkMode(true)
     document.documentElement.classList.add("dark")
 
-    // Fetch transactions from Firebase
+    const auth = getAuth()
+
+    // Define the loadData function
     const loadData = async () => {
       try {
-        // Check authentication state before fetching
-        const auth = getAuth()
-        if (!auth.currentUser) {
-          console.log("User not authenticated yet, skipping data fetch")
-          return
-        }
-
         setIsLoading(true)
 
         // Fetch transactions and agents in parallel
@@ -400,8 +395,21 @@ export default function Page() {
       }
     }
 
-    loadData()
-  }, [])
+    // Use onAuthStateChanged to trigger data loading only when the user is authenticated
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        console.log("User is authenticated, loading data")
+        loadData()
+      } else {
+        console.log("User is not authenticated, skipping data fetch")
+        setTransactions([]) // Clear transactions if user is logged out
+        setIsLoading(false) // Ensure loading is set to false
+      }
+    })
+
+    // Clean up the subscription
+    return () => unsubscribe()
+  }, [toast, t])
 
   // Apply dark mode
   useEffect(() => {

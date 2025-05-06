@@ -186,6 +186,7 @@ export default function LoginPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.7, duration: 0.5 }}
                 className="text-center text-sm text-gray-200"
+                style={{ display: "none" }}
               >
                 {t("auth.noAccount")}{" "}
                 <Link href="/signup" className="text-gray-300 hover:text-white hover:underline transition-colors">

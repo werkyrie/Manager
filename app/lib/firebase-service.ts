@@ -53,7 +53,9 @@ export const fetchTransactions = async (): Promise<Transaction[]> => {
   try {
     // Check if user is authenticated by getting the current user from Firebase Auth
     const auth = getAuth()
-    if (!auth.currentUser) {
+    const user = auth.currentUser // Get the current user
+
+    if (!user) {
       console.log("User not authenticated, returning empty transactions array")
       return []
     }
