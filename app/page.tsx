@@ -34,6 +34,7 @@ import { CSVImport } from "./components/csv-import"
 import { CSVExport } from "./components/csv-export"
 import { NotesView } from "./components/notes-view"
 import { Button } from "@/components/ui/button"
+import { BottomNavigation } from "./components/bottom-navigation"
 
 // Import the useTranslation hook and LanguageSwitcher component
 import { useTranslation } from "react-i18next"
@@ -907,7 +908,7 @@ export default function Page() {
         </nav>
 
         {/* Main Content */}
-        <div className="md:ml-64 p-4">
+        <div className="md:ml-64 p-4 pb-20 md:pb-4">
           <header className="flex justify-between items-center mb-6 bg-background p-4 rounded-lg shadow-sm border border-border/40">
             <div className="flex items-center">
               <button
@@ -1048,6 +1049,15 @@ export default function Page() {
 
           {/* CSV Export Modal */}
           {showExportModal && <CSVExport transactions={transactions} onCancel={() => setShowExportModal(false)} />}
+
+          {/* Bottom Navigation for Mobile */}
+          <BottomNavigation
+            currentView={currentView}
+            setCurrentView={(view) => {
+              setCurrentView(view)
+              setSideNavOpen(false)
+            }}
+          />
         </div>
 
         {/* Toaster */}

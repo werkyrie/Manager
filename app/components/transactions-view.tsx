@@ -482,7 +482,7 @@ export function TransactionsView({
 
   // Add a loading indicator at the top of the return statement
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-x-hidden">
       {isLoading && (
         <div className="fixed inset-0 bg-background/80 flex items-center justify-center z-50">
           <div className="flex flex-col items-center gap-2">
@@ -945,7 +945,7 @@ export function TransactionsView({
           </table>
 
           {/* Add mobile card view for small screens */}
-          <div className="grid grid-cols-1 gap-4 md:hidden">
+          <div className="grid grid-cols-1 gap-4 md:hidden overflow-y-auto max-h-[calc(100vh-16rem)]">
             {getPaginatedTransactions().map((transaction) =>
               editingInlineId === transaction.id ? (
                 // Mobile editing view

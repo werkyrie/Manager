@@ -378,6 +378,7 @@
     "previous": "Previous page",
     "next": "Next page",
     "page": "Page {{page}} of {{total}}",
+    "pageOf": "Page {{page}} of {{total}}",
     "goToPage": "Go to page {{page}}"
   }
 }
